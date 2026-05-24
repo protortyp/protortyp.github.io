@@ -1,0 +1,30 @@
+<aside class="post-note">
+  {% if include.label %}<span class="post-note-label">{{ include.label }}</span>{% endif %}
+  <span class="post-note-text">{{ include.text | markdownify | remove: '<p>' | remove: '</p>' | strip_newlines }}</span>
+</aside>
+
+<style>
+  .post-note {
+    margin: 1.5rem 0 2rem;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+    border-radius: 6px;
+    background: rgba(127, 127, 127, 0.04);
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .post-note-label {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #7dd3c0;
+    font-weight: 600;
+  }
+  .post-note-text {
+    opacity: 0.85;
+  }
+</style>
