@@ -1,5 +1,9 @@
 set shell := ["bash", "-cu"]
 
+# Serve the blog locally on 0.0.0.0:4000
+serve:
+    bundle exec jekyll serve --livereload --host 0.0.0.0 --port 4000
+
 # Create a new post in _posts with Chirpy front matter.
 # Usage: just new "My Post Title"
 new title:
