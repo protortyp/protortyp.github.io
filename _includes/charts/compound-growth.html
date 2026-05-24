@@ -1,0 +1,265 @@
+{% raw %}
+<style>
+  .chart-compound-growth {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-compound-growth .controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+    border-radius: 6px;
+    background: rgba(127, 127, 127, 0.04);
+  }
+  @media (min-width: 600px) {
+    .chart-compound-growth .controls {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 900px) {
+    .chart-compound-growth .controls {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .chart-compound-growth .control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+  }
+  .chart-compound-growth .control-label {
+    display: flex;
+    justify-content: space-between;
+    opacity: 0.85;
+  }
+  .chart-compound-growth .control-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .chart-compound-growth input[type="range"] {
+    width: 100%;
+    accent-color: #7dd3c0;
+  }
+  .chart-compound-growth .result {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    align-items: baseline;
+  }
+  .chart-compound-growth .result-block {
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-compound-growth .result-label {
+    font-size: 0.75rem;
+    opacity: 0.65;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .chart-compound-growth .result-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+  }
+  .chart-compound-growth .result-value.real {
+    color: #7dd3c0;
+  }
+  .chart-compound-growth .result-value.nominal {
+    opacity: 0.7;
+  }
+  .chart-compound-growth svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-compound-growth .legend {
+    display: flex;
+    gap: 1.25rem;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    opacity: 0.85;
+  }
+  .chart-compound-growth .legend-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+</style>
+
+<div class="chart-compound-growth">
+  <div class="controls">
+    <div class="control">
+      <span class="control-label">
+        <span>Initial deposit</span>
+        <span class="control-value"><span id="cg-principal-val">25,000</span> €</span>
+      </span>
+      <input type="range" id="cg-principal" min="1000" max="50000" step="500" value="25000">
+    </div>
+    <div class="control">
+      <span class="control-label">
+        <span>Nominal return / yr</span>
+        <span class="control-value"><span id="cg-rate-val">7.0</span> %</span>
+      </span>
+      <input type="range" id="cg-rate" min="0" max="10" step="0.1" value="7">
+    </div>
+    <div class="control">
+      <span class="control-label">
+        <span>Inflation / yr</span>
+        <span class="control-value"><span id="cg-infl-val">2.0</span> %</span>
+      </span>
+      <input type="range" id="cg-infl" min="0" max="6" step="0.1" value="2">
+    </div>
+    <div class="control">
+      <span class="control-label">
+        <span>Years to retirement</span>
+        <span class="control-value"><span id="cg-years-val">67</span></span>
+      </span>
+      <input type="range" id="cg-years" min="20" max="70" step="1" value="67">
+    </div>
+  </div>
+
+  <div id="chart-compound-growth"></div>
+
+  <div class="legend">
+    <span><span class="legend-swatch" style="background:#7dd3c0;"></span>Purchasing power (today's euros)</span>
+    <span><span class="legend-swatch" style="background:repeating-linear-gradient(to right, #888 0 4px, transparent 4px 8px);"></span>Nominal (paper euros)</span>
+  </div>
+
+  <div class="result">
+    <div class="result-block">
+      <span class="result-label">At retirement (today's €)</span>
+      <span class="result-value real" id="cg-final-real">€ 656,380</span>
+    </div>
+    <div class="result-block">
+      <span class="result-label">Nominal (paper €)</span>
+      <span class="result-value nominal" id="cg-final-nominal">€ 2,331,000</span>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const principalEl = document.getElementById("cg-principal");
+  const rateEl = document.getElementById("cg-rate");
+  const inflEl = document.getElementById("cg-infl");
+  const yearsEl = document.getElementById("cg-years");
+  const principalValEl = document.getElementById("cg-principal-val");
+  const rateValEl = document.getElementById("cg-rate-val");
+  const inflValEl = document.getElementById("cg-infl-val");
+  const yearsValEl = document.getElementById("cg-years-val");
+  const finalRealEl = document.getElementById("cg-final-real");
+  const finalNominalEl = document.getElementById("cg-final-nominal");
+  const container = document.getElementById("chart-compound-growth");
+
+  const fmt = new Intl.NumberFormat("en-US");
+  const fmtCompact = v => {
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
+    if (v >= 1e3) return Math.round(v / 1e3) + "k";
+    return Math.round(v).toString();
+  };
+
+  function render() {
+    const P = +principalEl.value;
+    const rNom = +rateEl.value / 100;
+    const i = +inflEl.value / 100;
+    const t = +yearsEl.value;
+
+    principalValEl.textContent = fmt.format(P);
+    rateValEl.textContent = (+rateEl.value).toFixed(1);
+    inflValEl.textContent = (+inflEl.value).toFixed(1);
+    yearsValEl.textContent = t;
+
+    const realRateFactor = (1 + rNom) / (1 + i);
+    const series = [];
+    for (let y = 0; y <= t; y++) {
+      series.push({ year: y, value: P * Math.pow(1 + rNom, y), kind: "Nominal" });
+      series.push({ year: y, value: P * Math.pow(realRateFactor, y), kind: "Real" });
+    }
+    const lastReal = P * Math.pow(realRateFactor, t);
+    const lastNominal = P * Math.pow(1 + rNom, t);
+    finalRealEl.textContent = "€ " + fmt.format(Math.round(lastReal));
+    finalNominalEl.textContent = "€ " + fmt.format(Math.round(lastNominal));
+
+    const nominalSeries = series.filter(d => d.kind === "Nominal");
+    const realSeries = series.filter(d => d.kind === "Real");
+
+    const chart = Plot.plot({
+      height: 340,
+      marginLeft: 70,
+      marginRight: 20,
+      marginBottom: 40,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: "12px"
+      },
+      x: { label: "Years from birth", grid: true, nice: true },
+      y: {
+        label: "Purchasing power (today's €)",
+        labelAnchor: "top",
+        tickFormat: fmtCompact,
+        grid: true
+      },
+      marks: [
+        Plot.areaY(realSeries, {
+          x: "year",
+          y: "value",
+          fill: "#7dd3c0",
+          fillOpacity: 0.12
+        }),
+        Plot.lineY(nominalSeries, {
+          x: "year",
+          y: "value",
+          stroke: "#888",
+          strokeWidth: 1.5,
+          strokeDasharray: "4,4"
+        }),
+        Plot.lineY(realSeries, {
+          x: "year",
+          y: "value",
+          stroke: "#7dd3c0",
+          strokeWidth: 2.5
+        }),
+        Plot.dot([{ year: t, value: lastReal }], {
+          x: "year",
+          y: "value",
+          fill: "#7dd3c0",
+          r: 4
+        }),
+        Plot.dot([{ year: t, value: lastNominal }], {
+          x: "year",
+          y: "value",
+          fill: "#888",
+          r: 3
+        }),
+        Plot.ruleX([0], { stroke: "currentColor", strokeOpacity: 0.3 }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  [principalEl, rateEl, inflEl, yearsEl].forEach(el =>
+    el.addEventListener("input", render)
+  );
+
+  render();
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

@@ -1,0 +1,216 @@
+{% raw %}
+<style>
+  .chart-fruehstart {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-fruehstart svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-fruehstart .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    margin: 0.5rem 0 0.25rem;
+    font-size: 0.85rem;
+  }
+  .chart-fruehstart .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .chart-fruehstart .legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .chart-fruehstart .legend-swatch.ref {
+    background: repeating-linear-gradient(to right, currentColor 0 4px, transparent 4px 8px);
+    opacity: 0.5;
+  }
+  .chart-fruehstart .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+  }
+  .chart-fruehstart .summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 0.75rem;
+  }
+  .chart-fruehstart .summary-block {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+  }
+  .chart-fruehstart .summary-label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .chart-fruehstart .summary-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.15rem;
+    margin-top: 0.15rem;
+  }
+  .chart-fruehstart .summary-block.proposal .summary-value { color: #7dd3c0; }
+  .chart-fruehstart .summary-block.policy .summary-value { color: #f4a261; }
+</style>
+
+<div class="chart-fruehstart">
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#7dd3c0;"></span>Baby Fund (proposed): 25,000 € at birth</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#f4a261;"></span>Frühstart-Rente (actual policy): 10 €/month, age 6–18</span>
+    <span class="legend-item"><span class="legend-swatch ref"></span>Lifetime pension payout (median, today)</span>
+  </div>
+
+  <div id="chart-fruehstart"></div>
+
+  <div class="summary">
+    <div class="summary-block policy">
+      <div class="summary-label">Frühstart-Rente at age 67</div>
+      <div class="summary-value">€ 21,900</div>
+    </div>
+    <div class="summary-block proposal">
+      <div class="summary-label">Baby Fund at age 67</div>
+      <div class="summary-value">€ 656,300</div>
+    </div>
+  </div>
+
+  <div class="caption">
+    Both compounded at 5% real return per year. Reference line marks
+    roughly what the median German pensioner draws in total over a
+    typical retirement (~€250,000, lifetime).
+  </div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const r = 0.05;
+  const T = 67;
+
+  const babyFund = Array.from({ length: T + 1 }, (_, y) => ({
+    year: y,
+    value: 25000 * Math.pow(1 + r, y),
+    series: "Baby Fund"
+  }));
+
+  const fruehstart = [];
+  {
+    let v = 0;
+    for (let y = 0; y <= T; y++) {
+      fruehstart.push({ year: y, value: v, series: "Frühstart-Rente" });
+      if (y >= 6 && y <= 17) v += 120;
+      v = v * (1 + r);
+    }
+  }
+
+  const fmt = new Intl.NumberFormat("en-US");
+  const fmtCompact = v => {
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
+    if (v >= 1e3) return Math.round(v / 1e3) + "k";
+    return Math.round(v).toString();
+  };
+
+  const lastBaby = babyFund[T].value;
+  const lastFruh = fruehstart[T].value;
+
+  function render() {
+    const chart = Plot.plot({
+      height: 360,
+      marginLeft: 70,
+      marginRight: 80,
+      marginBottom: 40,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: "12px"
+      },
+      x: { label: "Age (years from birth)", grid: true, nice: true },
+      y: {
+        label: "Today's euros (real)",
+        labelAnchor: "top",
+        tickFormat: fmtCompact,
+        grid: true
+      },
+      marks: [
+        Plot.ruleY([250000], {
+          stroke: "currentColor",
+          strokeOpacity: 0.45,
+          strokeDasharray: "4,4"
+        }),
+        Plot.text([{ x: 2, y: 250000 }], {
+          x: "x",
+          y: "y",
+          text: () => "€ 250k — lifetime pension payout (median today)",
+          dy: -8,
+          textAnchor: "start",
+          fill: "currentColor",
+          fillOpacity: 0.7,
+          fontSize: 11
+        }),
+        Plot.areaY(babyFund, {
+          x: "year",
+          y: "value",
+          fill: "#7dd3c0",
+          fillOpacity: 0.12
+        }),
+        Plot.lineY(babyFund, {
+          x: "year",
+          y: "value",
+          stroke: "#7dd3c0",
+          strokeWidth: 2.5
+        }),
+        Plot.lineY(fruehstart, {
+          x: "year",
+          y: "value",
+          stroke: "#f4a261",
+          strokeWidth: 2.5
+        }),
+        Plot.dot([babyFund[T]], { x: "year", y: "value", fill: "#7dd3c0", r: 4 }),
+        Plot.dot([fruehstart[T]], { x: "year", y: "value", fill: "#f4a261", r: 4 }),
+        Plot.text([babyFund[T]], {
+          x: "year",
+          y: "value",
+          text: d => "€ " + fmt.format(Math.round(d.value)),
+          dx: 8,
+          textAnchor: "start",
+          fill: "#7dd3c0",
+          fontWeight: 700
+        }),
+        Plot.text([fruehstart[T]], {
+          x: "year",
+          y: "value",
+          text: d => "€ " + fmt.format(Math.round(d.value)),
+          dx: 8,
+          dy: 14,
+          textAnchor: "start",
+          fill: "#f4a261",
+          fontWeight: 700
+        }),
+        Plot.ruleX([0], { stroke: "currentColor", strokeOpacity: 0.3 }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-fruehstart");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

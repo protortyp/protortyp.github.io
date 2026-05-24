@@ -1,0 +1,57 @@
+<style>
+  .g {
+    cursor: help;
+    border-bottom: 1px dotted currentColor;
+    text-decoration: none;
+    position: relative;
+    outline: none;
+  }
+  .g[data-tip]:hover::after,
+  .g[data-tip]:focus::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 25, 0.96);
+    color: #e8e8eb;
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-style: normal;
+    font-weight: 400;
+    width: max-content;
+    max-width: 300px;
+    white-space: normal;
+    line-height: 1.45;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .g[data-tip]:hover::before,
+  .g[data-tip]:focus::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 3px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(20, 20, 25, 0.96);
+    z-index: 101;
+    pointer-events: none;
+  }
+  @media (max-width: 600px) {
+    .g[data-tip]:hover::after,
+    .g[data-tip]:focus::after {
+      left: 0;
+      transform: none;
+      max-width: min(86vw, 280px);
+    }
+    .g[data-tip]:hover::before,
+    .g[data-tip]:focus::before {
+      left: 14px;
+      transform: none;
+    }
+  }
+</style>
