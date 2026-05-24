@@ -63,8 +63,8 @@ analytics:
   goatcounter:
     id: # fill in your GoatCounter ID
   umami:
-    id: # fill in your Umami ID
-    domain: # fill in your Umami domain
+    id: "579b927e-57ad-4ee6-8722-84be68cfa63c"
+    domain: https://insights.christianengel.dev
   matomo:
     id: # fill in your Matomo ID
     domain: # fill in your Matomo domain
