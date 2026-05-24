@@ -1,0 +1,163 @@
+{% raw %}
+<style>
+  .chart-intelligence {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-intelligence svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-intelligence .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+  }
+  .chart-intelligence .summary {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  @media (min-width: 600px) {
+    .chart-intelligence .summary { grid-template-columns: repeat(3, 1fr); }
+  }
+  .chart-intelligence .summary-block {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+  }
+  .chart-intelligence .summary-label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .chart-intelligence .summary-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+    margin-top: 0.15rem;
+  }
+  .chart-intelligence .summary-block.before  .summary-value { color: #f4a261; }
+  .chart-intelligence .summary-block.after   .summary-value { color: #7dd3c0; }
+  .chart-intelligence .summary-block.bonus   .summary-value { color: #b08bbb; }
+</style>
+
+<div class="chart-intelligence">
+  <div id="chart-intelligence"></div>
+
+  <div class="summary">
+    <div class="summary-block before">
+      <div class="summary-label">Nov 2022 (GPT-3.5)</div>
+      <div class="summary-value">$ 20.00 / Mtok</div>
+    </div>
+    <div class="summary-block after">
+      <div class="summary-label">Oct 2024 (Flash 8B)</div>
+      <div class="summary-value">$ 0.07 / Mtok</div>
+    </div>
+    <div class="summary-block bonus">
+      <div class="summary-label">2025 bonus: GPT-4 class</div>
+      <div class="summary-value">$ 0.18 / Mtok</div>
+    </div>
+  </div>
+
+  <div class="caption">
+    Blended input+output cost (3:1 weighting) per million tokens for the
+    cheapest model at GPT-3.5 quality. Endpoint Oct 2024 / Gemini 1.5
+    Flash 8B is the AI Index's verified GPT-3.5-equivalent. The price
+    floor for that quality has held since. What changed in 2025 is the
+    quality at the same price tier: GPT-4.1 nano (Apr 2025) and Gemini
+    2.5 Flash-Lite (Jul 2025) are GPT-4 class and priced at $0.10 input
+    / $0.40 output (~$0.18 blended).
+  </div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const points = [
+    { date: new Date("2022-11-01"), price: 20.00,  label: "GPT-3.5 (davinci-003)" },
+    { date: new Date("2023-03-01"), price: 2.00,   label: "GPT-3.5-turbo" },
+    { date: new Date("2023-11-01"), price: 1.00,   label: "turbo-1106" },
+    { date: new Date("2024-07-01"), price: 0.26,   label: "GPT-4o mini" },
+    { date: new Date("2024-10-01"), price: 0.07,   label: "Gemini 1.5 Flash 8B" }
+  ];
+
+  function render() {
+    const chart = Plot.plot({
+      height: 360,
+      marginLeft: 70,
+      marginRight: 30,
+      marginBottom: 40,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: "12px"
+      },
+      x: {
+        type: "time",
+        label: null,
+        grid: true,
+        domain: [new Date("2022-09-01"), new Date("2024-12-31")]
+      },
+      y: {
+        type: "log",
+        label: "$ per million tokens (log)",
+        labelAnchor: "top",
+        grid: true,
+        ticks: [0.01, 0.1, 1, 10, 100],
+        tickFormat: v => v >= 1 ? "$" + v.toFixed(0) : "$" + v.toFixed(2),
+        domain: [0.05, 30]
+      },
+      marks: [
+        Plot.areaY(points, {
+          x: "date",
+          y: "price",
+          fill: "#7dd3c0",
+          fillOpacity: 0.1,
+          curve: "monotone-x"
+        }),
+        Plot.lineY(points, {
+          x: "date",
+          y: "price",
+          stroke: "#7dd3c0",
+          strokeWidth: 2.5,
+          curve: "monotone-x"
+        }),
+        Plot.dot(points, {
+          x: "date",
+          y: "price",
+          fill: "#7dd3c0",
+          r: 4
+        }),
+        Plot.text(points, {
+          x: "date",
+          y: "price",
+          text: "label",
+          dy: -14,
+          fill: "currentColor",
+          fillOpacity: 0.75,
+          fontSize: 11,
+          textAnchor: "start",
+          dx: 6
+        })
+      ]
+    });
+
+    const container = document.getElementById("chart-intelligence");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

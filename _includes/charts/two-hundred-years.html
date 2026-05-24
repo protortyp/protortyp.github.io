@@ -1,0 +1,239 @@
+{% raw %}
+<style>
+  .chart-200y {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-200y svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-200y .controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+    border-radius: 6px;
+    background: rgba(127, 127, 127, 0.04);
+  }
+  .chart-200y .control-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+  .chart-200y .control-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .chart-200y input[type="range"] {
+    width: 100%;
+    accent-color: #7dd3c0;
+  }
+  .chart-200y .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    margin: 0.5rem 0 0.25rem;
+    font-size: 0.85rem;
+  }
+  .chart-200y .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .chart-200y .legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .chart-200y .readout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  @media (min-width: 600px) {
+    .chart-200y .readout { grid-template-columns: repeat(4, 1fr); }
+  }
+  .chart-200y .readout-block {
+    padding: 0.6rem 0.85rem;
+    border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+  }
+  .chart-200y .readout-label {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .chart-200y .readout-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+    margin-top: 0.15rem;
+  }
+  .chart-200y .readout-block.poverty   .readout-value { color: #f4a261; }
+  .chart-200y .readout-block.mortality .readout-value { color: #d97b66; }
+  .chart-200y .readout-block.literacy  .readout-value { color: #6ca0dc; }
+  .chart-200y .readout-block.life      .readout-value { color: #7dd3c0; }
+  .chart-200y .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+  }
+</style>
+
+<div class="chart-200y">
+  <div class="controls">
+    <div>
+      <div class="control-label">
+        <span>Drag to a year</span>
+        <span><span class="control-value" id="y200-year">1985</span></span>
+      </div>
+      <input type="range" id="y200-slider" min="1820" max="2024" step="1" value="1985">
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#f4a261;"></span>Extreme poverty (% of people)</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#d97b66;"></span>Under-5 mortality (% of births)</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#6ca0dc;"></span>Adult literacy (%)</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#7dd3c0;"></span>Life expectancy (years)</span>
+  </div>
+
+  <div id="chart-200y"></div>
+
+  <div class="readout">
+    <div class="readout-block poverty">
+      <div class="readout-label">Poverty</div>
+      <div class="readout-value" id="y200-poverty">38%</div>
+    </div>
+    <div class="readout-block mortality">
+      <div class="readout-label">Child mortality</div>
+      <div class="readout-value" id="y200-mortality">10%</div>
+    </div>
+    <div class="readout-block literacy">
+      <div class="readout-label">Literacy</div>
+      <div class="readout-value" id="y200-literacy">71%</div>
+    </div>
+    <div class="readout-block life">
+      <div class="readout-label">Life expectancy</div>
+      <div class="readout-value" id="y200-life">63 yrs</div>
+    </div>
+  </div>
+
+  <div class="caption">
+    Slide the year to see the world the average human was born into. Sources:
+    World Bank / Moatsos (poverty), UN IGME (under-5 mortality), UNESCO and Our
+    World in Data (literacy), UN WPP 2024 (life expectancy).
+  </div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const poverty = [
+    {year:1820,value:76},{year:1900,value:67},{year:1950,value:60},
+    {year:1981,value:44},{year:1990,value:38},{year:2000,value:30},
+    {year:2010,value:18},{year:2024,value:10.4}
+  ];
+  const mortality = [
+    {year:1800,value:43},{year:1900,value:36.5},{year:1950,value:22.5},
+    {year:1990,value:9.3},{year:2000,value:7.7},{year:2010,value:5.6},
+    {year:2024,value:3.66}
+  ];
+  const literacy = [
+    {year:1820,value:12},{year:1900,value:21},{year:1950,value:42},
+    {year:1970,value:56},{year:1990,value:76},{year:2000,value:82},
+    {year:2022,value:87}
+  ];
+  const life = [
+    {year:1800,value:29},{year:1900,value:32},{year:1950,value:46.5},
+    {year:1970,value:58},{year:1990,value:64.4},{year:2010,value:70.5},
+    {year:2024,value:73.3}
+  ];
+
+  function interp(series, year) {
+    if (year <= series[0].year) return series[0].value;
+    if (year >= series[series.length-1].year) return series[series.length-1].value;
+    for (let i = 0; i < series.length - 1; i++) {
+      const a = series[i], b = series[i+1];
+      if (year >= a.year && year <= b.year) {
+        const t = (year - a.year) / (b.year - a.year);
+        return a.value + t * (b.value - a.value);
+      }
+    }
+    return series[series.length-1].value;
+  }
+
+  const slider = document.getElementById("y200-slider");
+  const yearEl = document.getElementById("y200-year");
+  const povEl = document.getElementById("y200-poverty");
+  const morEl = document.getElementById("y200-mortality");
+  const litEl = document.getElementById("y200-literacy");
+  const lifeEl = document.getElementById("y200-life");
+  const container = document.getElementById("chart-200y");
+
+  function render() {
+    const y = +slider.value;
+    yearEl.textContent = y;
+
+    const p = interp(poverty, y);
+    const m = interp(mortality, y);
+    const l = interp(literacy, y);
+    const li = interp(life, y);
+
+    povEl.textContent = p.toFixed(1) + "%";
+    morEl.textContent = m.toFixed(1) + "%";
+    litEl.textContent = l.toFixed(0) + "%";
+    lifeEl.textContent = li.toFixed(0) + " yrs";
+
+    const chart = Plot.plot({
+      height: 380,
+      marginLeft: 50,
+      marginRight: 30,
+      marginBottom: 40,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: "12px"
+      },
+      x: { label: null, tickFormat: d => String(d), grid: true, domain: [1800, 2026] },
+      y: {
+        label: "% / years",
+        labelAnchor: "top",
+        grid: true,
+        domain: [0, 100]
+      },
+      marks: [
+        Plot.lineY(poverty,   { x: "year", y: "value", stroke: "#f4a261", strokeWidth: 2.5, curve: "monotone-x" }),
+        Plot.lineY(mortality, { x: "year", y: "value", stroke: "#d97b66", strokeWidth: 2.5, curve: "monotone-x" }),
+        Plot.lineY(literacy,  { x: "year", y: "value", stroke: "#6ca0dc", strokeWidth: 2.5, curve: "monotone-x" }),
+        Plot.lineY(life,      { x: "year", y: "value", stroke: "#7dd3c0", strokeWidth: 2.5, curve: "monotone-x" }),
+        Plot.ruleX([y], { stroke: "currentColor", strokeOpacity: 0.45, strokeDasharray: "4,4" }),
+        Plot.dot([{year:y, value:p}],  { x:"year", y:"value", fill:"#f4a261", r:4 }),
+        Plot.dot([{year:y, value:m}],  { x:"year", y:"value", fill:"#d97b66", r:4 }),
+        Plot.dot([{year:y, value:l}],  { x:"year", y:"value", fill:"#6ca0dc", r:4 }),
+        Plot.dot([{year:y, value:li}], { x:"year", y:"value", fill:"#7dd3c0", r:4 })
+      ]
+    });
+
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  slider.addEventListener("input", render);
+  render();
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

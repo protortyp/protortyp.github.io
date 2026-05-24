@@ -1,0 +1,172 @@
+{% raw %}
+<style>
+  .chart-cost-curves {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-cost-curves svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-cost-curves .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    margin: 0.5rem 0 0.25rem;
+    font-size: 0.85rem;
+  }
+  .chart-cost-curves .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .chart-cost-curves .legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .chart-cost-curves .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+  }
+  .chart-cost-curves .summary {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  @media (min-width: 600px) {
+    .chart-cost-curves .summary {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .chart-cost-curves .summary-block {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+  }
+  .chart-cost-curves .summary-label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .chart-cost-curves .summary-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+    margin-top: 0.15rem;
+  }
+  .chart-cost-curves .summary-block.solar    .summary-value { color: #f4a261; }
+  .chart-cost-curves .summary-block.battery  .summary-value { color: #7dd3c0; }
+  .chart-cost-curves .summary-block.genome   .summary-value { color: #b08bbb; }
+</style>
+
+<div class="chart-cost-curves">
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#f4a261;"></span>Solar module ($/W)</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#7dd3c0;"></span>Battery pack ($/kWh)</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#b08bbb;"></span>Genome sequence ($)</span>
+  </div>
+
+  <div id="chart-cost-curves"></div>
+
+  <div class="summary">
+    <div class="summary-block solar">
+      <div class="summary-label">Solar, since 1975</div>
+      <div class="summary-value">-99.8%</div>
+    </div>
+    <div class="summary-block battery">
+      <div class="summary-label">Batteries, since 2010</div>
+      <div class="summary-value">-93%</div>
+    </div>
+    <div class="summary-block genome">
+      <div class="summary-label">Genome, since 2001</div>
+      <div class="summary-value">-99.9998%</div>
+    </div>
+  </div>
+
+  <div class="caption">
+    All three on a log y-axis, the only honest way to draw a number that
+    falls 99%. Sources: Our World in Data / IRENA (solar), BloombergNEF
+    (batteries), NHGRI and manufacturer disclosures (genome).
+  </div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const solar = [
+    {year:1976,value:96.51},{year:1980,value:35.47},{year:1990,value:11.72},
+    {year:2000,value:6.29},{year:2010,value:2.44},{year:2015,value:0.72},
+    {year:2020,value:0.36},{year:2024,value:0.26}
+  ].map(d => ({...d, series: "Solar"}));
+
+  const battery = [
+    {year:2010,value:1474},{year:2013,value:684},{year:2016,value:295},
+    {year:2018,value:181},{year:2020,value:140},{year:2022,value:161},
+    {year:2024,value:115},{year:2025,value:108}
+  ].map(d => ({...d, series: "Battery"}));
+
+  const genome = [
+    {year:2001,value:95263072},{year:2008,value:342502},{year:2010,value:29092},
+    {year:2015,value:1245},{year:2020,value:689},{year:2024,value:200}
+  ].map(d => ({...d, series: "Genome"}));
+
+  const fmt = v => {
+    if (v >= 1e6) return "$" + (v/1e6).toFixed(0) + "M";
+    if (v >= 1e3) return "$" + (v/1e3).toFixed(0) + "k";
+    if (v >= 1)   return "$" + v.toFixed(0);
+    return "$" + v.toFixed(2);
+  };
+
+  function render() {
+    const chart = Plot.plot({
+      height: 380,
+      marginLeft: 70,
+      marginRight: 30,
+      marginBottom: 40,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: "12px"
+      },
+      x: { label: null, tickFormat: d => String(d), grid: true, domain: [1976, 2026] },
+      y: {
+        type: "log",
+        label: "cost (log)",
+        labelAnchor: "top",
+        grid: true,
+        ticks: [0.1, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000],
+        tickFormat: fmt
+      },
+      marks: [
+        Plot.lineY(solar,   { x: "year", y: "value", stroke: "#f4a261", strokeWidth: 2.5, curve: "monotone-x" }),
+        Plot.lineY(battery, { x: "year", y: "value", stroke: "#7dd3c0", strokeWidth: 2.5, curve: "monotone-x" }),
+        Plot.lineY(genome,  { x: "year", y: "value", stroke: "#b08bbb", strokeWidth: 2.5, curve: "monotone-x" }),
+        Plot.dot(solar,     { x: "year", y: "value", fill: "#f4a261", r: 2.5 }),
+        Plot.dot(battery,   { x: "year", y: "value", fill: "#7dd3c0", r: 2.5 }),
+        Plot.dot(genome,    { x: "year", y: "value", fill: "#b08bbb", r: 2.5 }),
+        Plot.text([solar[solar.length-1]],   { x:"year", y:"value", text:d=>fmt(d.value), dx:8, textAnchor:"start", fill:"#f4a261", fontWeight:700 }),
+        Plot.text([battery[battery.length-1]],{x:"year", y:"value", text:d=>fmt(d.value), dx:8, textAnchor:"start", fill:"#7dd3c0", fontWeight:700 }),
+        Plot.text([genome[genome.length-1]], { x:"year", y:"value", text:d=>fmt(d.value), dx:8, textAnchor:"start", fill:"#b08bbb", fontWeight:700 })
+      ]
+    });
+
+    const container = document.getElementById("chart-cost-curves");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}
