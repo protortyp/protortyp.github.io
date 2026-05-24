@@ -1,0 +1,40 @@
+{%- comment -%}
+  Local override of chirpy's post-description.html that also strips
+  Liquid tags from post.content — otherwise posts starting with an
+  include leak raw template syntax into the Further Reading excerpt.
+{%- endcomment -%}
+
+{%- capture liquid_open -%}{% raw %}{%{% endraw %}{%- endcapture -%}
+{%- capture liquid_close -%}{% raw %}%}{% endraw %}{%- endcapture -%}
+{%- capture output_open -%}{% raw %}{{{% endraw %}{%- endcapture -%}
+{%- capture output_close -%}{% raw %}}}{% endraw %}{%- endcapture -%}
+
+{%- capture description -%}
+  {%- if post.description -%}
+    {{- post.description -}}
+  {%- else -%}
+    {%- assign content = post.content -%}
+
+    {%- if content contains '<td class="rouge-gutter gl"><pre class="lineno">' -%}
+      {%- assign content = content | replace: '<td class="rouge-gutter gl"><pre class="lineno">', '<!-- <td class="rouge-gutter gl"><pre class="lineno">' -%}
+      {%- assign content = content | replace: '</td><td class="rouge-code">', '</td> --><td class="rouge-code">' -%}
+    {%- endif -%}
+
+    {%- assign content = content
+      | replace: liquid_open, '<!--'
+      | replace: liquid_close, '-->'
+      | replace: output_open, '<!--'
+      | replace: output_close, '-->' -%}
+
+    {{- content | strip_html | newline_to_br | replace: '<br />', ' ' | strip_newlines -}}
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- if include.json -%}
+  {%- assign description = description | jsonify -%}
+{%- else -%}
+  {%- assign max_length = include.max_length | default: 200 -%}
+  {%- assign description = description | strip | truncate: max_length -%}
+{%- endif -%}
+
+{{- description -}}
