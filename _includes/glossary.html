@@ -3,16 +3,10 @@
     cursor: help;
     border-bottom: 1px dotted currentColor;
     text-decoration: none;
-    position: relative;
     outline: none;
   }
-  .g[data-tip]:hover::after,
-  .g[data-tip]:focus::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
+  .g-tooltip {
+    position: fixed;
     background: rgba(20, 20, 25, 0.96);
     color: #e8e8eb;
     padding: 0.6rem 0.8rem;
@@ -20,38 +14,166 @@
     font-size: 0.82rem;
     font-style: normal;
     font-weight: 400;
-    width: max-content;
-    max-width: 300px;
-    white-space: normal;
     line-height: 1.45;
-    z-index: 100;
+    max-width: 300px;
+    z-index: 9999;
     pointer-events: none;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.07);
+    opacity: 0;
+    transition: opacity 0.12s ease;
   }
-  .g[data-tip]:hover::before,
-  .g[data-tip]:focus::before {
-    content: "";
+  .g-tooltip.is-visible {
+    opacity: 1;
+  }
+  .g-tooltip-arrow {
     position: absolute;
-    bottom: calc(100% + 3px);
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: rgba(20, 20, 25, 0.96);
-    z-index: 101;
-    pointer-events: none;
+    width: 10px;
+    height: 10px;
+    background: rgba(20, 20, 25, 0.96);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    transform: rotate(45deg);
   }
   @media (max-width: 600px) {
-    .g[data-tip]:hover::after,
-    .g[data-tip]:focus::after {
-      left: 0;
-      transform: none;
-      max-width: min(86vw, 280px);
+    .g-tooltip.is-mobile {
+      left: 1rem !important;
+      right: 1rem !important;
+      bottom: 1rem !important;
+      top: auto !important;
+      max-width: none;
+      font-size: 0.9rem;
+      padding: 0.8rem 1rem;
+      line-height: 1.5;
     }
-    .g[data-tip]:hover::before,
-    .g[data-tip]:focus::before {
-      left: 14px;
-      transform: none;
+    .g-tooltip.is-mobile .g-tooltip-arrow {
+      display: none;
     }
   }
 </style>
+
+<script>
+(function () {
+  if (window.__gGlossaryReady) return;
+  window.__gGlossaryReady = true;
+
+  let activeTooltip = null;
+  let activeTerm = null;
+
+  function isMobile() {
+    return window.matchMedia("(max-width: 600px)").matches;
+  }
+
+  function removeTooltip() {
+    if (activeTooltip) {
+      activeTooltip.remove();
+      activeTooltip = null;
+      activeTerm = null;
+    }
+  }
+
+  function positionTooltip(tooltip, termRect) {
+    if (isMobile()) {
+      tooltip.classList.add("is-mobile");
+      return;
+    }
+    const tipRect = tooltip.getBoundingClientRect();
+    const margin = 8;
+    const vw = window.innerWidth;
+
+    let left = termRect.left + termRect.width / 2 - tipRect.width / 2;
+    left = Math.max(margin, Math.min(left, vw - tipRect.width - margin));
+
+    let placeBelow = false;
+    let top = termRect.top - tipRect.height - margin;
+    if (top < margin) {
+      top = termRect.bottom + margin;
+      placeBelow = true;
+    }
+
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
+
+    const arrow = tooltip.querySelector(".g-tooltip-arrow");
+    if (arrow) {
+      const termCenter = termRect.left + termRect.width / 2;
+      const arrowLeft = Math.max(8, Math.min(termCenter - left - 5, tipRect.width - 18));
+      arrow.style.left = arrowLeft + "px";
+      if (placeBelow) {
+        arrow.style.top = "-6px";
+        arrow.style.bottom = "auto";
+        arrow.style.borderRight = "none";
+        arrow.style.borderBottom = "none";
+        arrow.style.borderTop = "1px solid rgba(255, 255, 255, 0.07)";
+        arrow.style.borderLeft = "1px solid rgba(255, 255, 255, 0.07)";
+      } else {
+        arrow.style.top = "auto";
+        arrow.style.bottom = "-6px";
+      }
+    }
+  }
+
+  function showTooltip(el) {
+    if (activeTerm === el) return;
+    removeTooltip();
+    const text = el.getAttribute("data-tip");
+    if (!text) return;
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "g-tooltip";
+    tooltip.textContent = text;
+
+    if (!isMobile()) {
+      const arrow = document.createElement("div");
+      arrow.className = "g-tooltip-arrow";
+      tooltip.appendChild(arrow);
+    }
+
+    document.body.appendChild(tooltip);
+    positionTooltip(tooltip, el.getBoundingClientRect());
+
+    requestAnimationFrame(() => tooltip.classList.add("is-visible"));
+
+    activeTooltip = tooltip;
+    activeTerm = el;
+  }
+
+  function attach() {
+    document.querySelectorAll(".g[data-tip]").forEach(el => {
+      if (el.dataset.gReady) return;
+      el.dataset.gReady = "1";
+      el.addEventListener("mouseenter", () => showTooltip(el));
+      el.addEventListener("mouseleave", () => {
+        if (!isMobile()) removeTooltip();
+      });
+      el.addEventListener("focus", () => showTooltip(el));
+      el.addEventListener("blur", () => removeTooltip());
+      el.addEventListener("click", (e) => {
+        if (isMobile()) {
+          e.preventDefault();
+          if (activeTerm === el) removeTooltip();
+          else showTooltip(el);
+        }
+      });
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+    if (!activeTooltip) return;
+    if (!e.target.closest(".g[data-tip]")) removeTooltip();
+  });
+
+  window.addEventListener("resize", removeTooltip);
+  window.addEventListener("scroll", () => {
+    if (activeTooltip && activeTerm && !isMobile()) {
+      positionTooltip(activeTooltip, activeTerm.getBoundingClientRect());
+    }
+  }, { passive: true });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", attach);
+  } else {
+    attach();
+  }
+})();
+</script>

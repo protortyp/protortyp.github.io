@@ -1,0 +1,152 @@
+{% raw %}
+<style>
+  .chart-bill-composition {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-bill-composition svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-bill-composition .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 0.25rem 0 0.6rem;
+    font-size: 0.78rem;
+    opacity: 0.9;
+  }
+  .chart-bill-composition .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .chart-bill-composition .legend-swatch {
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .chart-bill-composition .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-bill-composition">
+  <div class="legend" id="legend-bill-comp"></div>
+
+  <div id="chart-bill-composition"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const colors = {
+    "Energy": "#5a8fb8",
+    "Grid":   "#f4a261",
+    "State":  "#d97b66"
+  };
+  const order = ["Energy", "Grid", "State"];
+
+  /* Reconstructed from BDEW totals + known levies */
+  const wide = [
+    { year: 2000, Energy:  5.50, Grid: 4.50, State:  3.94, total: 13.94 },
+    { year: 2003, Energy:  6.20, Grid: 5.00, State:  4.91, total: 16.11 },
+    { year: 2006, Energy:  7.00, Grid: 5.50, State:  6.96, total: 19.46 },
+    { year: 2010, Energy:  8.00, Grid: 6.00, State:  9.69, total: 23.69 },
+    { year: 2013, Energy:  9.00, Grid: 6.50, State: 13.34, total: 28.84 },
+    { year: 2015, Energy:  7.50, Grid: 7.00, State: 14.31, total: 28.81 },
+    { year: 2017, Energy:  7.00, Grid: 7.00, State: 15.28, total: 29.28 },
+    { year: 2019, Energy:  7.50, Grid: 7.50, State: 15.85, total: 30.85 },
+    { year: 2020, Energy:  7.50, Grid: 7.50, State: 16.81, total: 31.81 },
+    { year: 2021, Energy:  8.00, Grid: 7.50, State: 16.66, total: 32.16 },
+    { year: 2022, Energy: 13.00, Grid: 8.00, State: 16.91, total: 37.91 },
+    { year: 2023, Energy: 21.00, Grid: 9.00, State: 15.73, total: 45.73 },
+    { year: 2024, Energy: 16.00, Grid: 10.30, State: 14.62, total: 40.92 },
+    { year: 2025, Energy: 16.00, Grid: 10.90, State: 12.70, total: 39.60 },
+    { year: 2026, Energy: 14.00, Grid: 10.50, State: 12.50, total: 37.00 }
+  ];
+
+  const long = [];
+  for (const row of wide) {
+    for (const k of order) long.push({ year: row.year, layer: k, value: row[k] });
+  }
+
+  const legend = document.getElementById("legend-bill-comp");
+  for (const k of order) {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-swatch" style="background:${colors[k]}"></span><span>${k}</span>`;
+    legend.append(item);
+  }
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: 50,
+      marginRight: 30,
+      marginTop: 32,
+      marginBottom: 36,
+      height: 320,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: null,
+        tickFormat: d => String(d)
+      },
+      y: {
+        label: "ct / kWh",
+        labelAnchor: "top",
+        grid: true,
+        nice: true,
+        domain: [0, 48]
+      },
+      color: {
+        domain: order,
+        range: order.map(k => colors[k])
+      },
+      marks: [
+        Plot.areaY(long, {
+          x: "year",
+          y: "value",
+          z: "layer",
+          fill: "layer",
+          order: order,
+          curve: "monotone-x"
+        }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 }),
+        Plot.text([
+          { year: 2023, value: 46.5, label: "45.7" },
+          { year: 2000, value: 15.0, label: "13.94" }
+        ], {
+          x: "year",
+          y: "value",
+          text: "label",
+          fill: "currentColor",
+          fillOpacity: 0.85,
+          fontWeight: 600,
+          fontSize: isNarrow ? 10 : 11
+        })
+      ]
+    });
+
+    const container = document.getElementById("chart-bill-composition");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

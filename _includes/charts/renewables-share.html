@@ -1,0 +1,114 @@
+{% raw %}
+<style>
+  .chart-re-share {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-re-share svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-re-share .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-re-share">
+  <div id="chart-re-share"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const data = [
+    { year: 2000, share:  6.3 },
+    { year: 2005, share: 10.4 },
+    { year: 2010, share: 17.1 },
+    { year: 2013, share: 25.1 },
+    { year: 2015, share: 31.5 },
+    { year: 2018, share: 37.8 },
+    { year: 2020, share: 45.2 },
+    { year: 2022, share: 46.2 },
+    { year: 2023, share: 52.5 },
+    { year: 2024, share: 54.1 },
+    { year: 2025, share: 55.0 }
+  ];
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: 46,
+      marginRight: 30,
+      marginTop: 32,
+      marginBottom: 36,
+      height: 280,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: null,
+        tickFormat: d => String(d)
+      },
+      y: {
+        label: "% of consumption",
+        labelAnchor: "top",
+        grid: true,
+        nice: true,
+        domain: [0, 60],
+        tickFormat: d => `${d}%`
+      },
+      marks: [
+        Plot.areaY(data, {
+          x: "year",
+          y: "share",
+          fill: "#7dd3c0",
+          fillOpacity: 0.18,
+          curve: "monotone-x"
+        }),
+        Plot.lineY(data, {
+          x: "year",
+          y: "share",
+          stroke: "#7dd3c0",
+          strokeWidth: 2.5,
+          curve: "monotone-x"
+        }),
+        Plot.dot([data[0], data[data.length - 1]], {
+          x: "year",
+          y: "share",
+          fill: "#7dd3c0",
+          r: 4
+        }),
+        Plot.text([data[0], data[data.length - 1]], {
+          x: "year",
+          y: "share",
+          text: d => `${d.share.toFixed(1)}%`,
+          dy: -12,
+          fill: "currentColor",
+          fillOpacity: 0.85,
+          fontWeight: 600,
+          fontSize: isNarrow ? 10 : 11
+        }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-re-share");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

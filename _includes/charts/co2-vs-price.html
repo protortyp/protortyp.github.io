@@ -1,0 +1,176 @@
+{% raw %}
+<style>
+  .chart-co2-price {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-co2-price svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-co2-price .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.1rem;
+    margin: 0.25rem 0 0.6rem;
+    font-size: 0.8rem;
+    opacity: 0.9;
+  }
+  .chart-co2-price .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .chart-co2-price .legend-swatch {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .chart-co2-price .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-co2-price">
+  <div class="legend">
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#7dd3c0"></span>
+      <span>Power-sector CO₂ (Mt, left axis)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#d97b66"></span>
+      <span>Average household price (ct/kWh, right axis)</span>
+    </div>
+  </div>
+
+  <div id="chart-co2-price"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const co2 = [
+    { year: 2000, value: 326 },
+    { year: 2005, value: 309 },
+    { year: 2010, value: 314 },
+    { year: 2013, value: 305 },
+    { year: 2015, value: 280 },
+    { year: 2018, value: 263 },
+    { year: 2019, value: 225 },
+    { year: 2020, value: 187 },
+    { year: 2021, value: 220 },
+    { year: 2022, value: 211 },
+    { year: 2023, value: 201 },
+    { year: 2024, value: 183 },
+    { year: 2025, value: 160 }
+  ];
+
+  const price = [
+    { year: 2000, value: 13.94 },
+    { year: 2005, value: 18.66 },
+    { year: 2010, value: 23.69 },
+    { year: 2013, value: 28.84 },
+    { year: 2015, value: 28.81 },
+    { year: 2017, value: 29.28 },
+    { year: 2020, value: 31.81 },
+    { year: 2021, value: 32.16 },
+    { year: 2022, value: 37.91 },
+    { year: 2023, value: 45.73 },
+    { year: 2024, value: 40.92 },
+    { year: 2025, value: 39.60 }
+  ];
+
+  /* CO2 domain ~ [150, 340]; Price domain ~ [10, 50]. */
+  /* Scale CO2 to share the price y-axis: priceY = (co2 - 150) * (45 - 10) / (340 - 150) + 10 */
+  const CO2_MIN = 150, CO2_MAX = 340;
+  const PRICE_MIN = 10, PRICE_MAX = 50;
+  const co2ToPriceScale = v => (v - CO2_MIN) * (PRICE_MAX - PRICE_MIN) / (CO2_MAX - CO2_MIN) + PRICE_MIN;
+  const priceToCo2Scale = v => (v - PRICE_MIN) * (CO2_MAX - CO2_MIN) / (PRICE_MAX - PRICE_MIN) + CO2_MIN;
+
+  const co2Scaled = co2.map(d => ({ year: d.year, value: d.value, scaled: co2ToPriceScale(d.value) }));
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: 56,
+      marginRight: isNarrow ? 50 : 62,
+      marginTop: 32,
+      marginBottom: 36,
+      height: 320,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: null,
+        tickFormat: d => String(d)
+      },
+      y: {
+        label: "ct / kWh",
+        labelAnchor: "top",
+        grid: true,
+        domain: [PRICE_MIN, PRICE_MAX]
+      },
+      marks: [
+        Plot.axisY({
+          anchor: "right",
+          label: "Mt CO₂",
+          labelAnchor: "top",
+          ticks: [PRICE_MIN, 20, 30, 40, PRICE_MAX],
+          tickFormat: v => `${Math.round(priceToCo2Scale(v))}`,
+          color: "#7dd3c0"
+        }),
+
+        /* CO2 (scaled to price axis) */
+        Plot.lineY(co2Scaled, {
+          x: "year",
+          y: "scaled",
+          stroke: "#7dd3c0",
+          strokeWidth: 2.5,
+          curve: "monotone-x"
+        }),
+        Plot.dot(co2Scaled, {
+          x: "year",
+          y: "scaled",
+          fill: "#7dd3c0",
+          r: 3
+        }),
+
+        /* Price */
+        Plot.lineY(price, {
+          x: "year",
+          y: "value",
+          stroke: "#d97b66",
+          strokeWidth: 2.5,
+          curve: "monotone-x"
+        }),
+        Plot.dot(price, {
+          x: "year",
+          y: "value",
+          fill: "#d97b66",
+          r: 3
+        }),
+
+        Plot.ruleY([PRICE_MIN], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-co2-price");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

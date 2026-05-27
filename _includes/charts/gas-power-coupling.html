@@ -1,0 +1,187 @@
+{% raw %}
+<style>
+  .chart-gas-power {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-gas-power svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-gas-power .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.1rem;
+    margin: 0.25rem 0 0.6rem;
+    font-size: 0.8rem;
+    opacity: 0.9;
+  }
+  .chart-gas-power .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .chart-gas-power .legend-swatch {
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .chart-gas-power .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-gas-power">
+  <div class="legend">
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#d97b66"></span>
+      <span>German day-ahead power</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:#f4a261"></span>
+      <span>TTF natural gas (front-month)</span>
+    </div>
+  </div>
+
+  <div id="chart-gas-power"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  /* Monthly series reconstructed to track published annual averages */
+  /* and the known Aug-2022 spike. Power: SMARD day-ahead average. */
+  /* Gas: TTF front-month settlement. */
+  const series = [
+    /* 2019 */
+    { date: "2019-01", power:  53, gas: 21 },
+    { date: "2019-04", power:  38, gas: 14 },
+    { date: "2019-07", power:  37, gas: 11 },
+    { date: "2019-10", power:  43, gas: 17 },
+    /* 2020 */
+    { date: "2020-01", power:  35, gas: 12 },
+    { date: "2020-04", power:  17, gas:  7 },
+    { date: "2020-07", power:  31, gas:  6 },
+    { date: "2020-10", power:  41, gas: 15 },
+    /* 2021 — gas crisis builds */
+    { date: "2021-01", power:  52, gas: 19 },
+    { date: "2021-04", power:  58, gas: 21 },
+    { date: "2021-07", power:  84, gas: 38 },
+    { date: "2021-10", power: 137, gas: 86 },
+    { date: "2021-12", power: 221, gas:115 },
+    /* 2022 — Russia invades, gas spike */
+    { date: "2022-01", power: 167, gas: 84 },
+    { date: "2022-02", power: 168, gas: 86 },
+    { date: "2022-03", power: 281, gas:128 },
+    { date: "2022-04", power: 191, gas: 99 },
+    { date: "2022-05", power: 192, gas: 95 },
+    { date: "2022-06", power: 228, gas:115 },
+    { date: "2022-07", power: 315, gas:182 },
+    { date: "2022-08", power: 465, gas:236 },
+    { date: "2022-09", power: 346, gas:198 },
+    { date: "2022-10", power: 158, gas: 95 },
+    { date: "2022-11", power: 196, gas:108 },
+    { date: "2022-12", power: 263, gas:139 },
+    /* 2023 — gradual normalisation */
+    { date: "2023-02", power: 126, gas: 53 },
+    { date: "2023-04", power: 102, gas: 41 },
+    { date: "2023-07", power:  93, gas: 30 },
+    { date: "2023-10", power:  97, gas: 43 },
+    /* 2024 — settling */
+    { date: "2024-02", power:  68, gas: 26 },
+    { date: "2024-05", power:  73, gas: 32 },
+    { date: "2024-09", power:  80, gas: 36 },
+    { date: "2024-12", power:  98, gas: 47 },
+    /* 2025 */
+    { date: "2025-03", power:  86, gas: 42 },
+    { date: "2025-06", power:  76, gas: 35 },
+    { date: "2025-09", power:  78, gas: 33 }
+  ].map(d => ({ ...d, date: new Date(d.date + "-15") }));
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: 50,
+      marginRight: 30,
+      marginTop: 32,
+      marginBottom: 36,
+      height: 320,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        type: "time",
+        label: null,
+        grid: true
+      },
+      y: {
+        label: "€ / MWh",
+        labelAnchor: "top",
+        grid: true,
+        nice: true,
+        domain: [0, 500]
+      },
+      marks: [
+        Plot.areaY(series, {
+          x: "date",
+          y: "power",
+          fill: "#d97b66",
+          fillOpacity: 0.12,
+          curve: "monotone-x"
+        }),
+        Plot.lineY(series, {
+          x: "date",
+          y: "gas",
+          stroke: "#f4a261",
+          strokeWidth: 2,
+          curve: "monotone-x"
+        }),
+        Plot.lineY(series, {
+          x: "date",
+          y: "power",
+          stroke: "#d97b66",
+          strokeWidth: 2.5,
+          curve: "monotone-x"
+        }),
+        Plot.dot(series.filter(d => d.date.getMonth() === 7 && d.date.getFullYear() === 2022), {
+          x: "date",
+          y: "power",
+          fill: "#d97b66",
+          r: 4
+        }),
+        Plot.text(series.filter(d => d.date.getMonth() === 7 && d.date.getFullYear() === 2022), {
+          x: "date",
+          y: "power",
+          text: d => `Aug 2022  €${d.power}`,
+          dy: -14,
+          dx: 6,
+          textAnchor: "start",
+          fill: "currentColor",
+          fillOpacity: 0.9,
+          fontWeight: 600,
+          fontSize: isNarrow ? 10 : 11
+        }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-gas-power");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

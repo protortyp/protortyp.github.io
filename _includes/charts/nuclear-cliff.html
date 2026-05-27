@@ -1,0 +1,126 @@
+{% raw %}
+<style>
+  .chart-nuclear-cliff {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-nuclear-cliff svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-nuclear-cliff .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-nuclear-cliff">
+  <div id="chart-nuclear-cliff"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const data = [
+    { year: 1970, twh:   6 },
+    { year: 1975, twh:  21 },
+    { year: 1980, twh:  56 },
+    { year: 1985, twh: 126 },
+    { year: 1990, twh: 152 },
+    { year: 1995, twh: 154 },
+    { year: 2000, twh: 170 },
+    { year: 2001, twh: 171 },
+    { year: 2005, twh: 163 },
+    { year: 2010, twh: 141 },
+    { year: 2011, twh: 108 },
+    { year: 2015, twh:  92 },
+    { year: 2020, twh:  64 },
+    { year: 2021, twh:  69 },
+    { year: 2022, twh:  35 },
+    { year: 2023, twh:   7 },
+    { year: 2024, twh:   0 }
+  ];
+
+  const annotations = [
+    { year: 2001, twh: 171, label: "peak 171 TWh" },
+    { year: 2011, twh: 108, label: "Fukushima" },
+    { year: 2023, twh:   7, label: "last reactors off" }
+  ];
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: 50,
+      marginRight: isNarrow ? 30 : 110,
+      marginTop: 32,
+      marginBottom: 36,
+      height: 320,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: null,
+        tickFormat: d => String(d)
+      },
+      y: {
+        label: "TWh / year",
+        labelAnchor: "top",
+        grid: true,
+        nice: true,
+        domain: [0, 200]
+      },
+      marks: [
+        Plot.areaY(data, {
+          x: "year",
+          y: "twh",
+          fill: "#b08bbb",
+          fillOpacity: 0.18,
+          curve: "monotone-x"
+        }),
+        Plot.lineY(data, {
+          x: "year",
+          y: "twh",
+          stroke: "#b08bbb",
+          strokeWidth: 2.5,
+          curve: "monotone-x"
+        }),
+        Plot.dot(annotations, {
+          x: "year",
+          y: "twh",
+          fill: "#b08bbb",
+          r: 4
+        }),
+        Plot.text(annotations, {
+          x: "year",
+          y: "twh",
+          text: "label",
+          dy: -14,
+          dx: 4,
+          textAnchor: "start",
+          fill: "currentColor",
+          fillOpacity: 0.85,
+          fontSize: isNarrow ? 10 : 11
+        }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-nuclear-cliff");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

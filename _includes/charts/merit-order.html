@@ -1,0 +1,167 @@
+{% raw %}
+<style>
+  .chart-merit-order {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-merit-order svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-merit-order .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 0.25rem 0 0.6rem;
+    font-size: 0.78rem;
+    opacity: 0.9;
+  }
+  .chart-merit-order .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .chart-merit-order .legend-swatch {
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .chart-merit-order .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-merit-order">
+  <div class="legend">
+    <div class="legend-item"><span class="legend-swatch" style="background:#7dd3c0"></span><span>Wind &amp; solar</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#5a8fb8"></span><span>Hydro &amp; biomass</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#8b6f47"></span><span>Lignite</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#4a4a4a"></span><span>Hard coal</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#d97b66"></span><span>Gas CCGT</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#7a3e30"></span><span>Gas peakers / oil</span></div>
+  </div>
+
+  <div id="chart-merit-order"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const blocks = [
+    { source: "Wind + solar",    x1:  0,  x2: 30,  cost:   0, color: "#7dd3c0" },
+    { source: "Hydro + biomass", x1: 30,  x2: 40,  cost:  20, color: "#5a8fb8" },
+    { source: "Lignite",         x1: 40,  x2: 55,  cost:  45, color: "#8b6f47" },
+    { source: "Hard coal",       x1: 55,  x2: 67,  cost:  75, color: "#4a4a4a" },
+    { source: "Gas CCGT",        x1: 67,  x2: 95,  cost:  95, color: "#d97b66" },
+    { source: "Gas peak / oil",  x1: 95,  x2: 110, cost: 175, color: "#7a3e30" }
+  ];
+
+  const DEMAND = 75;
+  const CLEARING = 95;
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+
+    const chart = Plot.plot({
+      marginLeft: 56,
+      marginRight: 30,
+      marginTop: 32,
+      marginBottom: 44,
+      height: 340,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: "available capacity (GW)",
+        labelAnchor: "right",
+        domain: [0, 115],
+        grid: false,
+        nice: true
+      },
+      y: {
+        label: "marginal cost (€ / MWh)",
+        labelAnchor: "top",
+        domain: [0, 200],
+        grid: true
+      },
+      marks: [
+        Plot.rect(blocks, {
+          x1: "x1",
+          x2: "x2",
+          y1: 0,
+          y2: "cost",
+          fill: "color",
+          fillOpacity: d => d.x1 < DEMAND ? 0.95 : 0.3,
+          stroke: "color",
+          strokeWidth: 0.5
+        }),
+        Plot.text(blocks, {
+          x: d => (d.x1 + d.x2) / 2,
+          y: d => d.cost + 6,
+          text: d => `€${d.cost}`,
+          fill: "currentColor",
+          fillOpacity: 0.85,
+          fontVariantNumeric: "tabular-nums",
+          fontSize: isNarrow ? 10 : 11
+        }),
+
+        Plot.ruleX([DEMAND], {
+          stroke: "currentColor",
+          strokeWidth: 1.5,
+          strokeDasharray: "5 4",
+          strokeOpacity: 0.9
+        }),
+        Plot.text([{ x: DEMAND, y: 195, label: `demand · ${DEMAND} GW` }], {
+          x: "x",
+          y: "y",
+          text: "label",
+          dx: -6,
+          textAnchor: "end",
+          fill: "currentColor",
+          fillOpacity: 0.95,
+          fontWeight: 600,
+          fontSize: isNarrow ? 10 : 11
+        }),
+
+        Plot.ruleY([CLEARING], {
+          stroke: "#d97b66",
+          strokeWidth: 1.5,
+          strokeDasharray: "5 4",
+          strokeOpacity: 0.85
+        }),
+        Plot.text([{ x: 2, y: CLEARING, label: `clearing price · €${CLEARING}` }], {
+          x: "x",
+          y: "y",
+          text: "label",
+          dy: -8,
+          textAnchor: "start",
+          fill: "#d97b66",
+          fontWeight: 600,
+          fontSize: isNarrow ? 10 : 11
+        }),
+
+        Plot.ruleX([0], { stroke: "currentColor", strokeOpacity: 0.3 }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-merit-order");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

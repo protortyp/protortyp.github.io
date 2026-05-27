@@ -1,0 +1,165 @@
+{% raw %}
+<style>
+  .chart-gen-mix {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-gen-mix svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-gen-mix .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.9rem;
+    margin: 0.25rem 0 0.6rem;
+    font-size: 0.78rem;
+    opacity: 0.9;
+  }
+  .chart-gen-mix .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .chart-gen-mix .legend-swatch {
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .chart-gen-mix .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-gen-mix">
+  <div class="legend" id="legend-gen-mix"></div>
+
+  <div id="chart-gen-mix"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const colors = {
+    "Lignite":    "#8b6f47",
+    "Hard coal":  "#4a4a4a",
+    "Gas":        "#d97b66",
+    "Other":      "#a8b5be",
+    "Nuclear":    "#b08bbb",
+    "Hydro":      "#5a8fb8",
+    "Biomass":    "#8db580",
+    "Wind":       "#7dd3c0",
+    "Solar":      "#f4a261"
+  };
+
+  /* Stack order from bottom to top */
+  const order = ["Lignite", "Hard coal", "Gas", "Other", "Nuclear", "Hydro", "Biomass", "Wind", "Solar"];
+
+  const wide = [
+    { year: 1990, Lignite: 170, "Hard coal": 140, Nuclear: 145, Gas: 35, Wind:   0, Solar:  0, Biomass:  1, Hydro: 20, Other: 40 },
+    { year: 1995, Lignite: 150, "Hard coal": 145, Nuclear: 154, Gas: 40, Wind:   1, Solar:  0, Biomass:  1, Hydro: 22, Other: 30 },
+    { year: 2000, Lignite: 148, "Hard coal": 143, Nuclear: 170, Gas: 49, Wind:  10, Solar:  0, Biomass:  2, Hydro: 25, Other: 30 },
+    { year: 2005, Lignite: 154, "Hard coal": 130, Nuclear: 163, Gas: 71, Wind:  27, Solar:  1, Biomass: 14, Hydro: 27, Other: 36 },
+    { year: 2010, Lignite: 146, "Hard coal": 117, Nuclear: 141, Gas: 89, Wind:  38, Solar: 12, Biomass: 29, Hydro: 21, Other: 40 },
+    { year: 2015, Lignite: 155, "Hard coal": 117, Nuclear:  92, Gas: 62, Wind:  80, Solar: 39, Biomass: 45, Hydro: 19, Other: 38 },
+    { year: 2018, Lignite: 146, "Hard coal":  83, Nuclear:  76, Gas: 84, Wind: 111, Solar: 46, Biomass: 45, Hydro: 17, Other: 41 },
+    { year: 2020, Lignite:  92, "Hard coal":  43, Nuclear:  64, Gas: 96, Wind: 132, Solar: 51, Biomass: 45, Hydro: 19, Other: 33 },
+    { year: 2021, Lignite: 110, "Hard coal":  53, Nuclear:  69, Gas: 89, Wind: 113, Solar: 51, Biomass: 44, Hydro: 19, Other: 39 },
+    { year: 2022, Lignite: 116, "Hard coal":  56, Nuclear:  35, Gas: 79, Wind: 122, Solar: 60, Biomass: 44, Hydro: 18, Other: 49 },
+    { year: 2023, Lignite:  78, "Hard coal":  36, Nuclear:   7, Gas: 78, Wind: 142, Solar: 60, Biomass: 42, Hydro: 20, Other: 53 },
+    { year: 2024, Lignite:  71, "Hard coal":  27, Nuclear:   0, Gas: 57, Wind: 136, Solar: 72, Biomass: 36, Hydro: 21, Other: 77 },
+    { year: 2025, Lignite:  75, "Hard coal":  28, Nuclear:   0, Gas: 85, Wind: 110, Solar: 90, Biomass: 43, Hydro: 20, Other: 58 }
+  ];
+
+  const long = [];
+  for (const row of wide) {
+    for (const src of order) {
+      long.push({ year: row.year, source: src, twh: row[src] || 0 });
+    }
+  }
+
+  /* Build legend */
+  const legend = document.getElementById("legend-gen-mix");
+  for (const src of order) {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-swatch" style="background:${colors[src]}"></span><span>${src}</span>`;
+    legend.append(item);
+  }
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: 56,
+      marginRight: 30,
+      marginTop: 32,
+      marginBottom: 36,
+      height: 360,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: null,
+        tickFormat: d => String(d)
+      },
+      y: {
+        label: "TWh / year",
+        labelAnchor: "top",
+        grid: true,
+        nice: true,
+        domain: [0, 700]
+      },
+      color: {
+        domain: order,
+        range: order.map(s => colors[s])
+      },
+      marks: [
+        Plot.areaY(long, {
+          x: "year",
+          y: "twh",
+          z: "source",
+          fill: "source",
+          order: order,
+          curve: "monotone-x"
+        }),
+        /* Annotations */
+        Plot.ruleX([2011], { stroke: "currentColor", strokeOpacity: 0.45, strokeDasharray: "3 4" }),
+        Plot.ruleX([2023], { stroke: "currentColor", strokeOpacity: 0.45, strokeDasharray: "3 4" }),
+        Plot.text([
+          { year: 2011, twh: 690, label: "Fukushima" },
+          { year: 2023, twh: 690, label: "last reactors off" }
+        ], {
+          x: "year",
+          y: "twh",
+          text: "label",
+          dx: 4,
+          textAnchor: "start",
+          fill: "currentColor",
+          fillOpacity: 0.9,
+          fontWeight: 600,
+          fontSize: isNarrow ? 10 : 11
+        }),
+        Plot.ruleY([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-gen-mix");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

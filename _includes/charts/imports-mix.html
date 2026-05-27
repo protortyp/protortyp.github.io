@@ -1,0 +1,167 @@
+{% raw %}
+<style>
+  .chart-imports-mix {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-imports-mix svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-imports-mix .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 0.25rem 0 0.6rem;
+    font-size: 0.78rem;
+    opacity: 0.9;
+  }
+  .chart-imports-mix .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .chart-imports-mix .legend-swatch {
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .chart-imports-mix .footer-callout {
+    margin-top: 0.65rem;
+    padding: 0.75rem 0.9rem;
+    border-left: 3px solid #b08bbb;
+    background: rgba(176, 139, 187, 0.06);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .chart-imports-mix .footer-callout strong {
+    color: #b08bbb;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-imports-mix .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="chart-imports-mix">
+  <div class="legend">
+    <div class="legend-item"><span class="legend-swatch" style="background:#b08bbb"></span><span>Nuclear</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#5a8fb8"></span><span>Hydro</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#7dd3c0"></span><span>Wind, solar, biomass</span></div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#6c7a89"></span><span>Fossil</span></div>
+  </div>
+
+  <div id="chart-imports-mix"></div>
+
+  <div class="footer-callout">
+    Germany's own nuclear generation in 2024:
+    <strong>0 TWh.</strong>
+    The country that switched off its carbon-free baseload in April 2023
+    spent the rest of the year buying carbon-free electricity from
+    countries that did not.
+  </div>
+
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const colors = {
+    "Nuclear": "#b08bbb",
+    "Hydro":   "#5a8fb8",
+    "Wind, solar, biomass": "#7dd3c0",
+    "Fossil":  "#6c7a89"
+  };
+  const sourceOrder = ["Nuclear", "Hydro", "Wind, solar, biomass", "Fossil"];
+
+  /* Net imports to Germany 2024, attributed to source country's generation mix. */
+  /* France:  ~65% nuclear, ~12% hydro, ~14% wind/solar/bio, ~9% fossil */
+  /* Denmark: ~0 nuclear, ~2% hydro, ~85% wind/solar/bio, ~13% fossil */
+  /* Switzerland: ~30% nuclear, ~60% hydro, ~6% wind/solar/bio, ~4% fossil */
+  /* Norway:  ~0 nuclear, ~88% hydro, ~10% wind/solar/bio, ~2% fossil */
+  const totals = { France: 12.9, Denmark: 12.0, Switzerland: 7.1, Norway: 5.8 };
+  const mix = {
+    France:      { Nuclear: 0.65, Hydro: 0.12, "Wind, solar, biomass": 0.14, Fossil: 0.09 },
+    Denmark:     { Nuclear: 0.00, Hydro: 0.02, "Wind, solar, biomass": 0.85, Fossil: 0.13 },
+    Switzerland: { Nuclear: 0.30, Hydro: 0.60, "Wind, solar, biomass": 0.06, Fossil: 0.04 },
+    Norway:      { Nuclear: 0.00, Hydro: 0.88, "Wind, solar, biomass": 0.10, Fossil: 0.02 }
+  };
+
+  const countryOrder = ["France", "Denmark", "Switzerland", "Norway"];
+  const data = [];
+  for (const c of countryOrder) {
+    for (const s of sourceOrder) {
+      data.push({ country: c, source: s, value: +(totals[c] * mix[c][s]).toFixed(2) });
+    }
+  }
+  const countryTotal = c => totals[c];
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: isNarrow ? 90 : 110,
+      marginRight: 60,
+      marginTop: 16,
+      marginBottom: 36,
+      height: 240,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: "TWh imported (2024)",
+        labelAnchor: "right",
+        grid: true,
+        nice: true,
+        domain: [0, 14]
+      },
+      y: {
+        label: null,
+        domain: countryOrder
+      },
+      color: {
+        domain: sourceOrder,
+        range: sourceOrder.map(s => colors[s])
+      },
+      marks: [
+        Plot.barX(data, {
+          x: "value",
+          y: "country",
+          fill: "source",
+          order: sourceOrder
+        }),
+        Plot.text(countryOrder.map(c => ({ country: c, total: countryTotal(c) })), {
+          x: "total",
+          y: "country",
+          text: d => `${d.total.toFixed(1)} TWh`,
+          dx: 6,
+          textAnchor: "start",
+          fill: "currentColor",
+          fillOpacity: 0.9,
+          fontVariantNumeric: "tabular-nums",
+          fontWeight: 600,
+          fontSize: isNarrow ? 11 : 12
+        }),
+        Plot.ruleX([0], { stroke: "currentColor", strokeOpacity: 0.3 })
+      ]
+    });
+
+    const container = document.getElementById("chart-imports-mix");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}
