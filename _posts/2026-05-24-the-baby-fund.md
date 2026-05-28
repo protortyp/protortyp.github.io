@@ -3,6 +3,7 @@ title: The Baby Fund
 date: 2026-05-24 18:41:16 +0200
 categories: [politics]
 tags: []
+hn: true
 ---
 
 {% include glossary.html %}

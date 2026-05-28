@@ -3,6 +3,7 @@ title: Political Velocity
 date: 2026-05-24 18:06:25 +0200
 categories: [politics]
 tags: []
+hn: true
 ---
 
 The conventional case for multi-party democracy is that it represents

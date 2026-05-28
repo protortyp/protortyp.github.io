@@ -3,6 +3,7 @@ title: Sixteen Experiments
 date: 2026-05-25 01:50:00 +0200
 categories: [politics]
 tags: []
+hn: true
 ---
 
 {% include glossary.html %}
