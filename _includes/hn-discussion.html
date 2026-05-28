@@ -1,0 +1,69 @@
+{%- comment -%}
+  Renders a "Discussion on HackerNews" callout for posts with `hn:` set
+  in frontmatter. Accepts:
+    - `hn: 48299742`  explicit HN item id
+    - `hn: true`      auto-discover the top submission of this post's URL
+                      via the HN Algolia API (resolved client-side).
+  Variants:
+    - default (card): full orange-bordered box, used above footnotes.
+    - mini:           inline [Y] ↑N · M 💬, used in post meta.
+  Live points/comments come from the Firebase HN API; auto-discovery
+  comes from Algolia. Both run from `hn-discussion-assets.html`.
+{%- endcomment -%}
+
+{%- assign hn_value = include.id | default: page.hn -%}
+{%- assign hn_id = nil -%}
+{%- assign hn_auto = false -%}
+{%- if hn_value == true or hn_value == 'auto' or hn_value == 'true' -%}
+  {%- assign hn_auto = true -%}
+{%- elsif hn_value -%}
+  {%- assign hn_id = hn_value -%}
+{%- endif -%}
+{%- assign _hn_base = site.data.hn.canonical_url | default: site.canonical_url | default: site.url -%}
+{%- assign hn_url = _hn_base | append: page.url -%}
+{%- assign variant = include.variant | default: 'card' -%}
+{%- if hn_id or hn_auto -%}
+  {%- if variant == 'mini' -%}
+<a
+  href="{% if hn_id %}https://news.ycombinator.com/item?id={{ hn_id }}{% else %}https://hn.algolia.com/?q={{ hn_url | url_encode }}{% endif %}"
+  target="_blank"
+  rel="noopener noreferrer"
+  class="hn-discussion hn-discussion--mini{% if hn_auto %} hn-discussion--pending{% endif %}"
+  {% if hn_id %}data-hn-id="{{ hn_id }}"{% endif %}
+  {% if hn_auto %}data-hn-auto="{{ hn_url }}"{% endif %}
+  aria-label="Discussion on HackerNews"
+>
+  <svg class="hn-mini-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <rect width="16" height="16" rx="2" fill="#FF6600"/>
+    <text x="8" y="12" font-family="monospace" font-size="11" font-weight="bold" fill="white" text-anchor="middle">Y</text>
+  </svg>
+  <span class="hn-mini-stats" data-hn-stats hidden>
+    <span class="hn-mini-points" data-hn-points></span>
+    <span class="hn-mini-sep" aria-hidden="true">·</span>
+    <span class="hn-mini-comments" data-hn-comments></span>
+  </span>
+</a>
+  {%- else -%}
+<a
+  href="{% if hn_id %}https://news.ycombinator.com/item?id={{ hn_id }}{% else %}https://hn.algolia.com/?q={{ hn_url | url_encode }}{% endif %}"
+  target="_blank"
+  rel="noopener noreferrer"
+  class="hn-discussion{% if hn_auto %} hn-discussion--pending{% endif %}"
+  {% if hn_id %}data-hn-id="{{ hn_id }}"{% endif %}
+  {% if hn_auto %}data-hn-auto="{{ hn_url }}"{% endif %}
+>
+  <span class="hn-discussion-content">
+    <svg class="hn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <rect width="16" height="16" rx="2" fill="#FF6600"/>
+      <text x="8" y="12" font-family="monospace" font-size="11" font-weight="bold" fill="white" text-anchor="middle">Y</text>
+    </svg>
+    <span class="hn-link">Discussion on HackerNews</span>
+    <span class="hn-stats" data-hn-stats hidden>
+      <span class="hn-points" data-hn-points></span>
+      <span class="hn-separator" aria-hidden="true">·</span>
+      <span class="hn-comments" data-hn-comments></span>
+    </span>
+  </span>
+</a>
+  {%- endif -%}
+{%- endif -%}

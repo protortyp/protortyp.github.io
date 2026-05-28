@@ -3,6 +3,7 @@ title: Permitted by Physics
 date: 2026-05-24 22:53:14 +0200
 categories: []
 tags: []
+hn: true
 ---
 
 Sometime in the last two years the price of intelligence fell by a

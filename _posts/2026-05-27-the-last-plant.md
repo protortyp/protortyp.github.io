@@ -3,6 +3,7 @@ title: The Last Plant
 date: 2026-05-27 11:06:49 +0200
 categories: [politics,markets]
 tags: []
+hn: 48299742
 ---
 
 {% include glossary.html %}

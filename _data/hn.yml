@@ -1,0 +1,4 @@
+# Canonical base URL used by `_includes/hn-discussion.html` for Algolia
+# auto-discovery. Kept in `_data/` (not `_config.yml`) so `jekyll serve`
+# picks up changes on the fly and tests work in dev.
+canonical_url: "https://protortyp.github.io"
