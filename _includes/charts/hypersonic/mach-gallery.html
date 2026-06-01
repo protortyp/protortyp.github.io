@@ -128,14 +128,10 @@
   function refreshColor() { textColor = getComputedStyle(cv).color || '#aab'; }
   refreshColor();
 
-  // a at 30 km
-  const a30 = 301;       // m/s
-  const oneKmM = 1000;
+  /* a at 30 km */  const a30 = 301;       /* m/s */  const oneKmM = 1000;
   const londonBerlinM = 930e3;
-  const walkMs = 3000 / 3600;  // 3 km/h
-
-  // object library: nearest "what is at this Mach"
-  const cards = [
+  const walkMs = 3000 / 3600;  /* 3 km/h */
+  /* object library: nearest "what is at this Mach" */  const cards = [
     { m: 0.5,  name: 'Cessna 172',                  sub: 'small piston aircraft' },
     { m: 0.85, name: 'Commercial airliner',         sub: 'A320 at cruise' },
     { m: 1.0,  name: 'Speed of sound',              sub: '1,225 km/h at sea level' },
@@ -183,18 +179,13 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  // Animation: the slider sets velocity in m/s. The canvas shows 1 km of ground.
-  // Real-time: the dot covers the full canvas width in (1 km / v) seconds.
-  // For very fast Mach the dot blurs by overlapping ghosts.
-  let startMs = performance.now();
+  /* Animation: the slider sets velocity in m/s. The canvas shows 1 km of ground. */  /* Real-time: the dot covers the full canvas width in (1 km / v) seconds. */  /* For very fast Mach the dot blurs by overlapping ghosts. */  let startMs = performance.now();
   function loop(now) {
     const M = parseFloat(slider.value);
-    const v = M * a30;     // m/s of the fast object
-    const W = cv.clientWidth, H = cv.clientHeight;
+    const v = M * a30;     /* m/s of the fast object */    const W = cv.clientWidth, H = cv.clientHeight;
     ctx.clearRect(0, 0, W, H);
 
-    // gridlines: 0, 250, 500, 750, 1000 m
-    ctx.strokeStyle = textColor;
+    /* gridlines: 0, 250, 500, 750, 1000 m */    ctx.strokeStyle = textColor;
     ctx.globalAlpha = 0.25;
     ctx.lineWidth = 1;
     ctx.font = '10px monospace';
@@ -212,14 +203,10 @@
     ctx.fillText('1 km', padL + plotW - 22, H - 2);
     ctx.globalAlpha = 1;
 
-    // Two lanes:
-    //   top   = the selected speed
-    //   bottom= walking pace (3 km/h) for visual reference
-    const laneTopY = 24;
+    /* Two lanes: */    /*   top   = the selected speed */    /*   bottom= walking pace (3 km/h) for visual reference */    const laneTopY = 24;
     const laneBotY = H - 28;
 
-    // lane labels
-    ctx.fillStyle = '#7dd3c0';
+    /* lane labels */    ctx.fillStyle = '#7dd3c0';
     ctx.globalAlpha = 0.95;
     ctx.font = '11px monospace';
     ctx.fillText('M ' + M.toFixed(1), 2, laneTopY - 8);
@@ -228,26 +215,18 @@
     ctx.fillText('walking',  2, laneBotY + 16);
     ctx.globalAlpha = 1;
 
-    // wall-clock seconds since the loop started
-    const elapsed = (now - startMs) / 1000;
+    /* wall-clock seconds since the loop started */    const elapsed = (now - startMs) / 1000;
 
-    // how long it takes the fast dot to cross 1 km
-    const cycleTopS = oneKmM / v;
-    // walking pace cycle
-    const cycleBotS = oneKmM / walkMs;
+    /* how long it takes the fast dot to cross 1 km */    const cycleTopS = oneKmM / v;
+    /* walking pace cycle */    const cycleBotS = oneKmM / walkMs;
 
-    // top dot — modulo so it loops
-    const fTop = (elapsed % cycleTopS) / cycleTopS;
+    /* top dot — modulo so it loops */    const fTop = (elapsed % cycleTopS) / cycleTopS;
     const xTop = padL + fTop * plotW;
 
-    // bottom dot
-    const fBot = (elapsed % cycleBotS) / cycleBotS;
+    /* bottom dot */    const fBot = (elapsed % cycleBotS) / cycleBotS;
     const xBot = padL + fBot * plotW;
 
-    // motion-blur trail for the fast dot: a series of softer dots behind it
-    // The faster the dot, the more "ghosts" pile up in one frame.
-    const trailDur = Math.min(0.045, cycleTopS * 0.8);  // 45 ms trail max
-    const ghosts = 14;
+    /* motion-blur trail for the fast dot: a series of softer dots behind it */    /* The faster the dot, the more "ghosts" pile up in one frame. */    const trailDur = Math.min(0.045, cycleTopS * 0.8);  /* 45 ms trail max */    const ghosts = 14;
     for (let i = ghosts; i > 0; i--) {
       const tBack = (i / ghosts) * trailDur;
       const fG = ((elapsed - tBack) % cycleTopS + cycleTopS) % cycleTopS / cycleTopS;
@@ -260,8 +239,7 @@
     }
     ctx.globalAlpha = 1;
 
-    // top dot itself
-    ctx.beginPath();
+    /* top dot itself */    ctx.beginPath();
     ctx.arc(xTop, laneTopY, 6, 0, Math.PI * 2);
     ctx.fillStyle = '#7dd3c0';
     ctx.shadowColor = '#7dd3c0';
@@ -269,8 +247,7 @@
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // bottom dot
-    ctx.beginPath();
+    /* bottom dot */    ctx.beginPath();
     ctx.arc(xBot, laneBotY, 5, 0, Math.PI * 2);
     ctx.fillStyle = '#6c7a89';
     ctx.fill();
@@ -290,8 +267,7 @@
     tkmEl.textContent = fmtTime(oneKmM / v);
     tlbEl.textContent = fmtTime(londonBerlinM / v);
 
-    // highlight active preset if exact
-    document.querySelectorAll('.chart-hs-mach .preset').forEach(b => {
+    /* highlight active preset if exact */    document.querySelectorAll('.chart-hs-mach .preset').forEach(b => {
       b.classList.toggle('active', Math.abs(parseFloat(b.dataset.m) - M) < 0.05);
     });
 

@@ -109,8 +109,7 @@
   const Re_km = 6371;
   function horizonKm(h_km) { return Math.sqrt(2 * Re_km * h_km); }
 
-  // log-log curve points
-  const curve = [];
+  /* log-log curve points */  const curve = [];
   for (let h = 5; h <= 1500; h += 5) curve.push({ h, d: horizonKm(h) });
 
   const refs = [
@@ -146,8 +145,7 @@
   }
 
   function drawGantt(totalT, animT) {
-    // animT = clock-second-position (or null for static fully-revealed)
-    const stages = [
+    /* animT = clock-second-position (or null for static fully-revealed) */    const stages = [
       { name: 'Track convergence', dur: 30, color: PAL.purple },
       { name: 'Discrimination',    dur: 30, color: PAL.teal },
       { name: 'Fire-control commit', dur: 15, color: PAL.amber },
@@ -168,13 +166,9 @@
       color: engage > 0 ? PAL.teal : PAL.gray
     });
 
-    // when animating, dim stages that haven't started yet
-    function alphaFor(d) {
+    /* when animating, dim stages that haven't started yet */    function alphaFor(d) {
       if (animT === null) return 0.75;
-      if (animT >= d.t2) return 0.85;          // complete
-      if (animT >  d.t1) return 0.60;          // in progress
-      return 0.18;                              // not started yet
-    }
+      if (animT >= d.t2) return 0.85;          /* complete */      if (animT >  d.t1) return 0.60;          /* in progress */      return 0.18;                              /* not started yet */    }
     const dataDim = data.map(d => ({ ...d, alpha: alphaFor(d) }));
 
     const xMax = Math.max(totalT * 1.05, fixed * 1.15);
@@ -200,8 +194,7 @@
         Plot.text([{ x: totalT, y: data[0].name, label: 'impact' }],
           { x: 'x', y: 'y', text: 'label', fill: '#c97c5d', fontWeight: 700,
             textAnchor: 'end', dx: -4, fontSize: 11 }),
-        // animated "now" line
-        ...(animT !== null ? [
+        /* animated "now" line */        ...(animT !== null ? [
           Plot.ruleX([animT], { stroke: '#7dd3c0', strokeWidth: 2.5 }),
           Plot.text([{ x: animT, y: data[data.length - 1].name, label: 't = ' + animT.toFixed(0) + ' s' }],
             { x: 'x', y: 'y', text: 'label', fill: '#7dd3c0', fontWeight: 700,
@@ -220,8 +213,7 @@
     machVal.textContent = M.toFixed(1);
 
     const d = horizonKm(alt);
-    const a30 = P.soundSpeed(30000) / 1000;  // km/s
-    const Vclose = M * a30;
+    const a30 = P.soundSpeed(30000) / 1000;  /* km/s */    const Vclose = M * a30;
     const tof = d / Vclose;
     const fixed = 30 + 30 + 15 + 75;
     const engage = Math.max(tof - fixed, 0);
@@ -249,8 +241,7 @@
   let lastTof = 0;
   let animating = false;
   let animStart = 0;
-  const CLOCK_SPEED = 8;  // 8× real time
-
+  const CLOCK_SPEED = 8;  /* 8× real time */
   function stopAnim() {
     animating = false;
     document.getElementById('hs-hor-play').textContent = '▶ Run the clock';

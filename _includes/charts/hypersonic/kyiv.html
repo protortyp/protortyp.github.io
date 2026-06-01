@@ -43,9 +43,7 @@
     { cat: 'Oreshnik (IRBM, MIRV)',                launched: 1,   intercepted: 0   },
   ];
 
-  // Normalise each row to a share of its own launches, so the teal
-  // length reads directly as the interception rate.
-  const data = [];
+  /* Normalise each row to a share of its own launches, so the teal */  /* length reads directly as the interception rate. */  const data = [];
   for (const r of rows) {
     const rate = r.intercepted / r.launched;
     data.push({ cat: r.cat, kind: 'Intercepted', frac: rate });

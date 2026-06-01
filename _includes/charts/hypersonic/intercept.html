@@ -83,10 +83,7 @@
   const P    = window.HSPhysics;
   const PAL  = window.HSPal;
 
-  // Editorial lethal-radius scale for the single-shot kill-probability model.
-  // A near-certain kill within a few tens of metres, falling off beyond.
-  const SIGMA = 0.060; // km
-
+  /* Editorial lethal-radius scale for the single-shot kill-probability model. */  /* A near-certain kill within a few tens of metres, falling off beyond. */  const SIGMA = 0.060; /* km */
   /* Three fixed scenarios. Mach numbers map to km/s via the speed of sound at
      30 km. gt is the target's lateral g during a single finite jink; gi is the
      interceptor's max-g, which caps its turn rate. */
@@ -126,9 +123,7 @@
     let miss = Infinity, missPt = null, missAt = null;
     let stepsSinceMin = 0, passed = false;
 
-    // Turn the interceptor heading toward bearing `los`, capped by the
-    // airframe's max turn rate.
-    function pursue(los) {
+    /* Turn the interceptor heading toward bearing `los`, capped by the */    /* airframe's max turn rate. */    function pursue(los) {
       let d = los - theta_i;
       while (d >  Math.PI) d -= 2 * Math.PI;
       while (d < -Math.PI) d += 2 * Math.PI;
@@ -140,8 +135,7 @@
       tpts.push({ x: tx, y: ty, t });
       if (launched) ipts.push({ x: ix, y: iy, t });
 
-      // Target maneuver: a single finite jink, not a sustained turn into a circle.
-      const dtl = t - t_launch;
+      /* Target maneuver: a single finite jink, not a sustained turn into a circle. */      const dtl = t - t_launch;
       if (launched && cfg.gt > 0 && dtl > cfg.jink0 && dtl < cfg.jink0 + cfg.jinkDur) {
         theta_t -= omega_t * dt;
       }
@@ -150,21 +144,15 @@
 
       if (!launched) {
         const r0 = Math.hypot(tx - SAM.x, ty - SAM.y);
-        // Stern chase: hold fire until the target is abeam and opening range,
-        // so it reads as a tail chase rather than a head-on crossing.
-        if (r0 <= cfg.lr && (!cfg.stern || tx > SAM.x)) {
+        /* Stern chase: hold fire until the target is abeam and opening range, */        /* so it reads as a tail chase rather than a head-on crossing. */        if (r0 <= cfg.lr && (!cfg.stern || tx > SAM.x)) {
           launched = true; t_launch = t;
           if (cfg.stern) {
-            theta_i = Math.atan2(ty - SAM.y, tx - SAM.x);     // pure pursuit
-          } else {
-            const tof = r0 / Vi;                              // lead the target
-            const lx = tx + Vt * Math.cos(theta_t) * tof;
+            theta_i = Math.atan2(ty - SAM.y, tx - SAM.x);     /* pure pursuit */          } else {
+            const tof = r0 / Vi;                              /* lead the target */            const lx = tx + Vt * Math.cos(theta_t) * tof;
             const ly = ty + Vt * Math.sin(theta_t) * tof;
             theta_i = Math.atan2(ly - SAM.y, lx - SAM.x);
           }
-          // Seed prevLOS with the true bearing to the target so the first PN
-          // step sees a real (near-zero) line-of-sight rate.
-          prevLOS = Math.atan2(ty - iy, tx - ix);
+          /* Seed prevLOS with the true bearing to the target so the first PN */          /* step sees a real (near-zero) line-of-sight rate. */          prevLOS = Math.atan2(ty - iy, tx - ix);
         }
       }
 
@@ -175,10 +163,7 @@
 
         const los = Math.atan2(ty - iy, tx - ix);
         if (cfg.stern || passed) {
-          // Pure pursuit: the whole way for a stern chase, or the tail end of a
-          // PN run once the target has slipped past closest approach. (PN there
-          // saturates its turn rate and spirals the interceptor.)
-          pursue(los);
+          /* Pure pursuit: the whole way for a stern chase, or the tail end of a */          /* PN run once the target has slipped past closest approach. (PN there */          /* saturates its turn rate and spirals the interceptor.) */          pursue(los);
         } else {
           let dlos = los - prevLOS;
           while (dlos >  Math.PI) dlos -= 2 * Math.PI;
@@ -191,14 +176,10 @@
         ix += Vi * Math.cos(theta_i) * dt;
         iy += Vi * Math.sin(theta_i) * dt;
 
-        // Time-since-launch, recomputed fresh: `dtl` above is stale on the
-        // launch step (t_launch is set mid-iteration, after dtl is read).
-        const since = t - t_launch;
+        /* Time-since-launch, recomputed fresh: `dtl` above is stale on the */        /* launch step (t_launch is set mid-iteration, after dtl is read). */        const since = t - t_launch;
         if (cfg.stern) {
-          if (tx > 360 || since > 160) break;          // run until the target escapes
-        } else {
-          if (passed && stepsSinceMin > 12) break;     // stop just past closest approach
-          if (since > 180) break;
+          if (tx > 360 || since > 160) break;          /* run until the target escapes */        } else {
+          if (passed && stepsSinceMin > 12) break;     /* stop just past closest approach */          if (since > 180) break;
         }
       }
 
@@ -255,8 +236,7 @@
       ring.push({ x: r.sam.x + cfg.lr * Math.cos(a), y: r.sam.y + cfg.lr * Math.sin(a) });
     }
 
-    // launch marker: first target point that satisfies the scenario's launch rule
-    let launchPoint = null;
+    /* launch marker: first target point that satisfies the scenario's launch rule */    let launchPoint = null;
     for (const p of r.tpts) {
       const d = Math.hypot(p.x - r.sam.x, p.y - r.sam.y);
       if (d <= cfg.lr && (!cfg.stern || p.x > r.sam.x)) { launchPoint = p; break; }

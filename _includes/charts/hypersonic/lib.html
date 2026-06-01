@@ -5,11 +5,7 @@
   ============================================================ */
   if (!window.HSPhysics) {
     window.HSPhysics = {
-      Re: 6371e3,   // earth radius m
-      g0: 9.80665,  // surface gravity m/s²
-      H:  7200,     // scale height m
-      rho0: 1.225,  // sea-level density kg/m³
-
+      Re: 6371e3,   /* earth radius m */      g0: 9.80665,  /* surface gravity m/s² */      H:  7200,     /* scale height m */      rho0: 1.225,  /* sea-level density kg/m³ */
       atmosphere(h_m) { return this.rho0 * Math.exp(-Math.max(h_m,0) / this.H); },
       gravity(h_m)    { return this.g0 * Math.pow(this.Re / (this.Re + Math.max(h_m,0)), 2); },
 
@@ -22,14 +18,11 @@
       },
       mach(V_mps, h_m) { return V_mps / this.soundSpeed(h_m); },
 
-      // Sutton–Graves convective heating, W/m²
-      // K = 1.7415e-4 for Earth air, R_n in m, V in m/s, ρ in kg/m³
-      suttonGraves(rho, V_mps, Rn_m) {
+      /* Sutton–Graves convective heating, W/m² */      /* K = 1.7415e-4 for Earth air, R_n in m, V in m/s, ρ in kg/m³ */      suttonGraves(rho, V_mps, Rn_m) {
         return 1.7415e-4 * Math.sqrt(rho / Rn_m) * Math.pow(V_mps, 3);
       },
 
-      // Plasma frequency, Hz, n_e in cm⁻³
-      plasmaFreq(ne_cm3) { return 8980 * Math.sqrt(ne_cm3); },
+      /* Plasma frequency, Hz, n_e in cm⁻³ */      plasmaFreq(ne_cm3) { return 8980 * Math.sqrt(ne_cm3); },
     };
   }
 
