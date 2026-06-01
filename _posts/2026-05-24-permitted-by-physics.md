@@ -22,22 +22,19 @@ It wasn't. It was barely a story at all. And the reason it wasn't, I
 have come to think, is the same reason I have come to believe the future
 is going to be bright.
 
-I have never understood cyberpunk. Not the aesthetic. The aesthetic is
-fine. I like rain and neon as much as anyone. The premise. The premise
-is always the same: breathtaking technology, flying cars, brain
-implants, holograms in the street, and underneath it a ruined planet, a
-starving underclass, and three megacorporations running everything. Half
-the future is turned up to eleven and the other half is left to rot.
+I have never understood cyberpunk. Not the aesthetic, which is fine. I
+like rain and neon as much as anyone. It is the premise I cannot follow,
+and the premise is always the same: breathtaking technology, flying
+cars, brain implants, holograms in the street, and underneath it a
+ruined planet, a starving and enslaved underclass, and three
+megacorporations running everything.
 
-It is not a prediction. It is a contradiction wearing a prediction's
-clothes.
-
-The argument I want to make about that comes from David Deutsch.
-Problems are inevitable. Problems are soluble. The human ability to
-transform nature is limited only by the laws of physics. Anything not
-forbidden by physics is achievable, given the right knowledge. The only
-thing standing between us and any particular transformation is knowing
-how.
+The argument I want to make against it comes from David Deutsch, and it
+starts with two of his sentences: problems are inevitable, and problems
+are soluble. The human ability to transform nature is limited only by
+the laws of physics. Anything not forbidden by physics is achievable,
+given the right knowledge, and the only thing standing between us and a
+particular transformation is knowing how.
 
 Apply that to the flying car. To build one that ordinary people use, you
 need four things. Energy so cheap that lifting a ton of metal into the
@@ -51,7 +48,7 @@ have it. Cheap energy is the entire problem of carbon removal. Pulling
 CO₂ out of the atmosphere is not forbidden by physics. It is expensive,
 and *expensive* is a synonym for *needs cheap energy*. A civilization
 with flying-car energy prices removes its carbon backlog the way we pave
-roads. Boring, scheduled, unremarkable.
+roads: boring, scheduled, unremarkable.
 
 Materials science good enough for flying cars is materials science good
 enough for cheap desalination, engineered crops, and ecological
@@ -60,29 +57,31 @@ that runs a personal doctor and a personal tutor for every human being.
 And the economic surplus that pays for all of it is, by definition, the
 opposite of the starving underclass the story insists on.
 
-So the cyberpunk future asks you to believe something genuinely strange.
-That a civilization solved the *hard* problem, limitless clean energy,
+So the cyberpunk future asks you to believe something genuinely strange:
+that a civilization solved the *hard* problem, limitless clean energy,
 advanced AI, abundant materials, and then sat in the rubble for a
-century declining to solve the *easy* ones that the hard solutions hand
-it for free. That isn't dark. It is incoherent. It is a society that
-built the ladder and then refused, on principle, to climb the last rung.
+century declining to solve the *easy* ones those hard solutions hand it
+for free. That isn't dark, it is incoherent, a society that built the
+ladder and then refused, on principle, to climb the last rung.
 
-The honest extrapolation runs the other way. If you genuinely believe in
-the flying cars, you are already committed to the regreened Earth. They
-come from the same knowledge. The solarpunk future, clean and abundant
-and alive, is not a softer alternative to the cyberpunk one. <u>It is
-the cyberpunk one with the arithmetic finished.</u>
+Run the extrapolation forward and it goes the other way. If you
+genuinely believe in the flying cars, you are already committed to the
+regreened Earth, because they come from the same knowledge. The
+solarpunk future, clean and abundant and alive, is not a softer
+alternative to the cyberpunk one. It is the cyberpunk one with the
+arithmetic finished.
 
 The doom is the part that doesn't follow. When I say the optimistic case
-is the *logical* one, people assume I'm doing vibes. So here is the
-opposite of vibes. Three things that happened in 2025, and a note on the
-address.
+is the *logical* one, people assume I'm running on vibes, so let me give
+the opposite: three things that actually happened in 2025, and a note on
+where they happened.
 
 The first AI-designed drug reached patients. A treatment for idiopathic
 pulmonary fibrosis, a disease that for as long as we have had a name for
 it has killed people on a steady schedule, where the machine did both
 halves of the work: picking the target and designing the molecule. The
-lab is in Hong Kong. The Phase IIa results were published in New York.
+lab is in Hong Kong, and the Phase IIa results were published in New
+York.
 
 A second cure moved from clinic to clinic. By late 2025 nearly three
 hundred sickle-cell patients had been referred for the first
@@ -94,7 +93,7 @@ Massachusetts and Switzerland.
 And we started leaving the planet at a cadence that looks like a typo.
 Three hundred and twenty-nine orbital launches in a single year, a 25%
 jump from the year before. One company flew more than half of them by
-itself. That company is in Texas.
+itself, and that company is in Texas.
 
 {% include charts/launches.html %}
 
@@ -116,9 +115,9 @@ watching and start building.
 
 That is the mechanism, wherever the bright future is being made.
 
-Here is the part that should be reassuring and somehow never is. None of
-this is new. The curve has been bending the right way for two hundred
-years. We are simply built not to notice.
+Here is the part that should be reassuring and somehow never is in
+discussions: none of this is new. The curve has been bending the right
+way for two hundred years, and we are simply built not to notice.
 
 In 1820, three out of four humans lived in extreme poverty and one in
 eight could read. Today extreme poverty is around one in ten and most
@@ -131,7 +130,7 @@ shrugged off a global pandemic in two years.
 
 Underneath all of it, the cost curves that make every story above
 possible kept doing the one thing the pessimist's model says is
-impossible. They kept collapsing.
+impossible: they kept collapsing.
 
 {% include charts/cost-curves.html %}
 
@@ -150,8 +149,8 @@ sudden thing was the one that ate you. A plane crash springs to mind.
 Four hundred thousand children *not* dying this year springs to mind for
 no one, because non-events do not have photographs.
 
-This is the deepest reason I distrust pessimism. It isn't that
-pessimists have bad data. It is that the pessimistic *feeling* is
+This is the deepest reason I distrust pessimism. The problem is not that
+pessimists have bad data; it is that the pessimistic *feeling* is
 manufactured by the structure of attention itself, and then mistaken for
 insight. The cleanest demonstration is an old one. In 1980 an economist
 bet the most famous doom author of the era that the price of any five
@@ -188,10 +187,9 @@ The good future is the *effortful* one. It is earned by a relatively
 small number of people working on hard things, unfashionably, for a long
 time, against a current that is forever telling them to stop.
 
-And the current is getting stronger. Negativity used to be a mood.
-Increasingly it is a program, and there are three currents in it worth
-naming, because vague gestures at *the doomers* let the actual arguments
-off the hook.
+And the current is getting stronger. Negativity used to be a mood,
+increasingly it is a program, and there are three currents in it worth
+naming.
 
 The first is the proposal to deliberately *shrink* the productive
 economy. To consume less, produce less, build less, on the theory that
@@ -226,7 +224,7 @@ have children of their own. They arrive in their twenties already
 exhausted, and the exhaustion gets read, by them and by everyone above
 them, as wisdom.
 
-It is not wisdom. It is miscalibration.
+The doomer wisdom is just obvious miscalibration.
 
 Climate change is the cleanest example. It is, strictly speaking, a
 *technical problem with a known solution path*. You need cheap clean
@@ -249,13 +247,13 @@ climate documentary are the same intervention, applied to opposite ends
 of the emotional range, with the same result: a person who cannot tell a
 load from a disaster.
 
-To be clear, so the lazy reading has nowhere to hide. The climate is
-warming. The arctic is melting. Species are dying. None of that is in
-dispute. What is in dispute is the response. The response of the people
-in this essay who are actually working on it is to build, fast, hard, in
-the direction of the solution. The response of the people who have
-decided to be sad about it is to be sad about it. Only one of these is
-going to do anything to the temperature of the planet.
+To be clear: the climate is warming, the arctic is melting, species are
+dying, and none of that is in dispute. What is in dispute is the
+response. The response of the people in this essay who are actually
+working on it is to build, fast, hard, in the direction of the solution.
+The response of the people who have decided to be sad about it is to be
+sad about it. Only one of these is going to do anything to the
+temperature of the planet.
 
 The [systems building the bright future
 fastest](/posts/political-velocity/) are the ones that can change
@@ -286,9 +284,9 @@ dose is just the lazy version in a different costume.
 
 So I am not promising the good future. Nobody can. What I am rejecting
 is the claim that the *bad* future is the sophisticated, clear-eyed,
-grown-up expectation, and optimism the naive one. It is the reverse. The
-dystopia is the incoherent story. The decline is the artifact of how
-attention works. The arithmetic, the actual numbers from this actual
+grown-up expectation and optimism the naive one. It is the reverse: the
+dystopia is the incoherent story, the decline is the artifact of how
+attention works, and the arithmetic, the actual numbers from this actual
 year, all point the other way. Toward a world with cheap clean energy,
 cured diseases, a personal tutor and a personal doctor for every human
 being, robots for the dull work, and a road back to the Moon and
@@ -302,11 +300,10 @@ person, and the first city's worth of rockets left the planet in a
 single year. If you cannot find that thrilling, the problem is not the
 future.
 
-None of it is guaranteed. That is not the bad news. That is the
-assignment. The reason a child born this year will live in a world with
-fusion power and longevity drugs and a thriving green Earth is if and
-only if enough of us spend the next thirty years working as though it
-depends on us. Because it does.
+None of it is guaranteed, and that is not the bad news, it is the
+assignment. A child born this year will live in a world with fusion
+power and longevity drugs and a re-greened Earth if and only if enough
+of us spend the next thirty years working as though it depends on us.
 
 So put down the cyberpunk novel. The arithmetic is on our side, the
 century is wide open, and the photograph nobody is taking is the one
