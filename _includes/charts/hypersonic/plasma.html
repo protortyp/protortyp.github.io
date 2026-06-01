@@ -1,0 +1,176 @@
+{% raw %}
+<style>
+  .chart-hs-plasma {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-hs-plasma .controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    margin: 0.8rem 0 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+    background: rgba(127,127,127,0.04);
+  }
+  .chart-hs-plasma .control { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; }
+  .chart-hs-plasma .control-label { display: flex; justify-content: space-between; opacity: 0.85; }
+  .chart-hs-plasma .control-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .chart-hs-plasma input[type=range] { width: 100%; accent-color: #7dd3c0; }
+  .chart-hs-plasma .presets {
+    display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem;
+  }
+  .chart-hs-plasma .preset {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    color: inherit;
+    transition: background 0.15s;
+  }
+  .chart-hs-plasma .preset:hover { background: rgba(125,211,192,0.12); }
+  .chart-hs-plasma svg { max-width: 100%; height: auto; background: transparent; }
+  .chart-hs-plasma .summary {
+    display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-top: 0.75rem;
+  }
+  @media (min-width: 600px) { .chart-hs-plasma .summary { grid-template-columns: 1fr 1fr; } }
+  .chart-hs-plasma .summary-block {
+    padding: 0.6rem 0.85rem; border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+  }
+  .chart-hs-plasma .summary-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
+  .chart-hs-plasma .summary-value { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1rem; margin-top: 0.1rem; }
+  .chart-hs-plasma .caption { font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; }
+</style>
+
+<div class="chart-hs-plasma">
+  <div class="controls">
+    <div class="control">
+      <span class="control-label">
+        <span>Electron density n<sub>e</sub></span>
+        <span class="control-value" id="hs-plasma-ne-v">3.2×10¹¹ cm⁻³</span>
+      </span>
+      <input type="range" id="hs-plasma-ne" min="80" max="155" step="1" value="115">
+      <div class="presets">
+        <button class="preset" data-ne="9.0">Mercury (M 7.5)</button>
+        <button class="preset" data-ne="10.8">Apollo lunar return (M 36)</button>
+        <button class="preset" data-ne="11.5">Shuttle re-entry (M 25)</button>
+        <button class="preset" data-ne="12.5">HGV glide phase (M 15)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hs-plasma-chart"></div>
+
+  <div class="summary">
+    <div class="summary-block">
+      <div class="summary-label">Plasma frequency f<sub>p</sub></div>
+      <div class="summary-value" id="hs-plasma-fp" style="color:#7dd3c0">·</div>
+    </div>
+    <div class="summary-block">
+      <div class="summary-label">Bands blacked out</div>
+      <div class="summary-value" id="hs-plasma-blacked" style="color:#c97c5d">·</div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+  const PAL  = window.HSPal;
+
+  const bands = [
+    { n: 'UHF telemetry (0.3–1 GHz)', lo: 0.3, hi: 1.0,  use: 'Mercury / Gemini comms' },
+    { n: 'GPS L1 (1.575 GHz)',         lo: 1.575, hi: 1.575, use: 'satellite navigation' },
+    { n: 'S-band (2–4 GHz)',           lo: 2,   hi: 4,    use: 'Apollo voice, AEGIS SPY-1' },
+    { n: 'C-band (4–8 GHz)',           lo: 4,   hi: 8,    use: 'weather, satellite' },
+    { n: 'X-band (8–12 GHz)',          lo: 8,   hi: 12,   use: 'AEGIS SPY-6, fire control' },
+    { n: 'Ku-band (12–18 GHz)',        lo: 12,  hi: 18,   use: 'Patriot PAC-3 seeker' },
+    { n: 'Ka-band (26–40 GHz)',        lo: 26,  hi: 40,   use: 'mmWave datalinks' },
+  ];
+
+  const slider = document.getElementById('hs-plasma-ne');
+  const neLabel = document.getElementById('hs-plasma-ne-v');
+
+  function fpGHz(neExp) { return 8980 * Math.sqrt(Math.pow(10, neExp)) / 1e9; }
+
+  function draw() {
+    const neExp = parseFloat(slider.value) / 10;
+    const fp = fpGHz(neExp);
+    const expWhole = Math.floor(neExp);
+    const expFrac = neExp - expWhole;
+    const mantissa = Math.pow(10, expFrac);
+    const supDigits = { '-': '⁻', '0': '⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹' };
+    const sup = String(expWhole).split('').map(c => supDigits[c] || c).join('');
+    neLabel.innerHTML = mantissa.toFixed(1) + '×10' + sup + ' cm⁻³';
+
+    document.getElementById('hs-plasma-fp').textContent = fp < 1
+      ? (fp * 1000).toFixed(0) + ' MHz'
+      : fp.toFixed(2) + ' GHz';
+
+    const dead = bands.filter(b => b.hi < fp).map(b => b.n.split(' (')[0]);
+    document.getElementById('hs-plasma-blacked').textContent = dead.length
+      ? dead.join(', ')
+      : 'none · signal passes';
+
+    // segment data
+    const segs = bands.map(b => {
+      const status = b.hi < fp ? 'dead' : (b.lo < fp ? 'fading' : 'ok');
+      const stroke = status === 'dead' ? PAL.gray
+                   : status === 'fading' ? PAL.amber
+                   : PAL.teal;
+      const opacity = status === 'dead' ? 0.35 : 1.0;
+      const lbl = status === 'dead' ? 'dead' : (status === 'fading' ? 'partial' : 'passes');
+      return { n: b.n, lo: Math.max(b.lo, 0.3), hi: Math.max(b.hi, 0.3), stroke, opacity, lbl, use: b.use };
+    });
+
+    const chart = Plot.plot({
+      height: 340,
+      marginLeft: 200,
+      marginRight: 80,
+      marginBottom: 38,
+      style: { background: 'transparent', color: 'currentColor', fontFamily: 'inherit', fontSize: '11px' },
+      x: {
+        type: 'log',
+        label: 'Radio frequency (GHz, log scale)',
+        domain: [0.25, 50],
+        grid: true,
+        ticks: [0.3, 1, 3, 10, 30],
+        tickFormat: v => v + ' GHz'
+      },
+      y: { domain: bands.map(b => b.n).reverse(), label: null },
+      marks: [
+        // cutoff region
+        Plot.rect([{ x1: 0.25, x2: Math.min(fp, 50), y1: -0.5, y2: bands.length - 0.5 }],
+          { x1: 'x1', x2: 'x2', y1: 'y1', y2: 'y2', fill: PAL.gray, fillOpacity: 0.08 }),
+        // cutoff line
+        Plot.ruleX([fp], { stroke: PAL.gray, strokeWidth: 1.5, strokeDasharray: '3,3' }),
+        Plot.text([{ x: Math.min(fp * 1.04, 45), y: bands.length - 1 }],
+          { x: 'x', y: 'y', text: () => 'f_p',
+            fill: PAL.gray, textAnchor: 'start', fontSize: 11, fontWeight: 700 }),
+        // band segments
+        Plot.link(segs, { x1: 'lo', x2: 'hi', y1: 'n', y2: 'n',
+          stroke: 'stroke', strokeWidth: 10, strokeOpacity: 'opacity' }),
+        Plot.text(segs, { x: d => Math.max(d.hi, d.lo) * 1.08, y: 'n',
+          text: 'lbl', fill: 'stroke', strokeOpacity: 'opacity',
+          textAnchor: 'start', fontSize: 10, fontWeight: 600 }),
+      ],
+    });
+    const el = document.getElementById('hs-plasma-chart');
+    el.innerHTML = ''; el.append(chart);
+  }
+
+  slider.addEventListener('input', draw);
+  document.querySelectorAll('.chart-hs-plasma .preset').forEach(b => {
+    b.addEventListener('click', () => {
+      slider.value = (parseFloat(b.dataset.ne) * 10).toFixed(0);
+      draw();
+    });
+  });
+  draw();
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(draw, 150); });
+</script>
+{% endraw %}

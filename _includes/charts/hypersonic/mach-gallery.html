@@ -1,0 +1,315 @@
+{% raw %}
+<style>
+  .chart-hs-mach {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-hs-mach .controls {
+    margin: 0.8rem 0 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+    background: rgba(127,127,127,0.04);
+  }
+  .chart-hs-mach .control { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; }
+  .chart-hs-mach .control-label { display: flex; justify-content: space-between; opacity: 0.85; }
+  .chart-hs-mach .control-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .chart-hs-mach input[type=range] { width: 100%; accent-color: #7dd3c0; }
+  .chart-hs-mach .presets {
+    display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem;
+  }
+  .chart-hs-mach .preset {
+    font-size: 0.78rem; padding: 0.3rem 0.65rem; cursor: pointer;
+    background: transparent; color: inherit; font-family: inherit;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 4px; transition: background 0.15s;
+  }
+  .chart-hs-mach .preset:hover { background: rgba(125,211,192,0.12); }
+  .chart-hs-mach .preset.active { background: rgba(125,211,192,0.18); border-color: #7dd3c0; }
+
+  .chart-hs-mach .track-wrap {
+    margin: 0.6rem 0;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+  }
+  .chart-hs-mach .track-meta {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 0.78rem; opacity: 0.75; margin-bottom: 0.35rem;
+  }
+  .chart-hs-mach canvas {
+    display: block; width: 100%; height: 78px;
+    background: linear-gradient(180deg, rgba(125,211,192,0.04), transparent);
+    border-radius: 4px;
+  }
+  .chart-hs-mach .object {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+    color: #7dd3c0;
+  }
+  .chart-hs-mach .object .sub { font-weight: 400; opacity: 0.7; font-size: 0.82rem; margin-left: 0.4rem; color: var(--text-color, currentColor); }
+
+  .chart-hs-mach .summary {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  @media (min-width: 600px) { .chart-hs-mach .summary { grid-template-columns: repeat(3, 1fr); } }
+  .chart-hs-mach .summary-block {
+    padding: 0.6rem 0.85rem; border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+  }
+  .chart-hs-mach .summary-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
+  .chart-hs-mach .summary-value { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1rem; margin-top: 0.1rem; }
+  .chart-hs-mach .caption { font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; }
+</style>
+
+<div class="chart-hs-mach">
+  <div class="controls">
+    <div class="control">
+      <span class="control-label">
+        <span>Mach number</span>
+        <span class="control-value">M <span id="hs-mach-v">8.0</span></span>
+      </span>
+      <input type="range" id="hs-mach" min="0.5" max="25" step="0.1" value="8">
+      <div class="presets">
+        <button class="preset" data-m="0.85">Airliner</button>
+        <button class="preset" data-m="2.0">Concorde</button>
+        <button class="preset" data-m="2.4">Rifle bullet</button>
+        <button class="preset" data-m="3.2">SR-71</button>
+        <button class="preset" data-m="5.0">X-15</button>
+        <button class="preset" data-m="8.0">Zircon</button>
+        <button class="preset" data-m="20.0">Avangard</button>
+        <button class="preset" data-m="25.0">ICBM re-entry</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="track-wrap">
+    <div class="track-meta">
+      <span>1 km of ground, in real time</span>
+      <span id="hs-mach-track-label">target speed shown vs walking pace (3 km/h)</span>
+    </div>
+    <canvas id="hs-mach-track"></canvas>
+    <div class="object" id="hs-mach-object">·</div>
+  </div>
+
+  <div class="summary">
+    <div class="summary-block">
+      <div class="summary-label">Velocity</div>
+      <div class="summary-value" id="hs-mach-vel" style="color:#7dd3c0">·</div>
+    </div>
+    <div class="summary-block">
+      <div class="summary-label">Time to cross 1 km</div>
+      <div class="summary-value" id="hs-mach-tkm">·</div>
+    </div>
+    <div class="summary-block">
+      <div class="summary-label">London → Berlin (930 km)</div>
+      <div class="summary-value" id="hs-mach-tlb">·</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const slider = document.getElementById('hs-mach');
+  const machVal = document.getElementById('hs-mach-v');
+  const objEl = document.getElementById('hs-mach-object');
+  const labelEl = document.getElementById('hs-mach-track-label');
+  const velEl = document.getElementById('hs-mach-vel');
+  const tkmEl = document.getElementById('hs-mach-tkm');
+  const tlbEl = document.getElementById('hs-mach-tlb');
+  const cv = document.getElementById('hs-mach-track');
+  const ctx = cv.getContext('2d');
+  let textColor = '#aab';
+  function refreshColor() { textColor = getComputedStyle(cv).color || '#aab'; }
+  refreshColor();
+
+  // a at 30 km
+  const a30 = 301;       // m/s
+  const oneKmM = 1000;
+  const londonBerlinM = 930e3;
+  const walkMs = 3000 / 3600;  // 3 km/h
+
+  // object library: nearest "what is at this Mach"
+  const cards = [
+    { m: 0.5,  name: 'Cessna 172',                  sub: 'small piston aircraft' },
+    { m: 0.85, name: 'Commercial airliner',         sub: 'A320 at cruise' },
+    { m: 1.0,  name: 'Speed of sound',              sub: '1,225 km/h at sea level' },
+    { m: 1.5,  name: 'F-16 in afterburner',         sub: 'sustained supersonic flight' },
+    { m: 2.0,  name: 'Concorde',                    sub: 'the only supersonic airliner' },
+    { m: 2.4,  name: 'High-velocity rifle bullet',  sub: '7.62 NATO leaving the muzzle' },
+    { m: 3.2,  name: 'SR-71 Blackbird',             sub: 'fastest jet ever flown' },
+    { m: 3.6,  name: 'Kinzhal (as observed)',       sub: 'Ukrainian Patriot track, 2023' },
+    { m: 5.0,  name: 'X-15 rocket plane',           sub: 'the hypersonic threshold' },
+    { m: 6.5,  name: 'HGV entry speed',             sub: 'after booster separation' },
+    { m: 8.0,  name: 'Zircon scramjet',             sub: 'sustained, powered, atmospheric' },
+    { m: 10.0, name: 'Kinzhal (as claimed)',        sub: 'Russian press figure' },
+    { m: 13.0, name: 'HTV-2 flight test',           sub: 'DARPA boost-glide, 2010-11' },
+    { m: 17.0, name: 'Ballistic warhead, terminal', sub: 'old-style ICBM re-entry vehicle' },
+    { m: 20.0, name: 'Avangard',                    sub: 'Russian boost-glide HGV' },
+    { m: 25.0, name: 'ICBM re-entry / orbital',     sub: '7.8 km/s, low-earth orbit' },
+    { m: 36.0, name: 'Apollo lunar return',         sub: '11 km/s, edge of survivability' },
+  ];
+
+  function nearestCard(M) {
+    let best = cards[0], bestD = Infinity;
+    for (const c of cards) {
+      const d = Math.abs(Math.log(c.m) - Math.log(M));
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return best;
+  }
+
+  function fmtV(v_ms) {
+    if (v_ms < 1000) return v_ms.toFixed(0) + ' m/s';
+    return (v_ms / 1000).toFixed(2) + ' km/s';
+  }
+  function fmtTime(s) {
+    if (s < 1)    return (s * 1000).toFixed(0) + ' ms';
+    if (s < 60)   return s.toFixed(1) + ' s';
+    if (s < 3600) return (s / 60).toFixed(1) + ' min';
+    return (s / 3600).toFixed(1) + ' h';
+  }
+
+  let dpr = 1;
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width  = cv.clientWidth  * dpr;
+    cv.height = cv.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // Animation: the slider sets velocity in m/s. The canvas shows 1 km of ground.
+  // Real-time: the dot covers the full canvas width in (1 km / v) seconds.
+  // For very fast Mach the dot blurs by overlapping ghosts.
+  let startMs = performance.now();
+  function loop(now) {
+    const M = parseFloat(slider.value);
+    const v = M * a30;     // m/s of the fast object
+    const W = cv.clientWidth, H = cv.clientHeight;
+    ctx.clearRect(0, 0, W, H);
+
+    // gridlines: 0, 250, 500, 750, 1000 m
+    ctx.strokeStyle = textColor;
+    ctx.globalAlpha = 0.25;
+    ctx.lineWidth = 1;
+    ctx.font = '10px monospace';
+    ctx.fillStyle = textColor;
+    const padL = 22, padR = 22;
+    const plotW = W - padL - padR;
+    for (let i = 0; i <= 4; i++) {
+      const x = padL + (i / 4) * plotW;
+      ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, H - 8); ctx.stroke();
+    }
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = textColor;
+    ctx.fillText('0', padL - 4, H - 2);
+    ctx.fillText('500 m', padL + plotW/2 - 14, H - 2);
+    ctx.fillText('1 km', padL + plotW - 22, H - 2);
+    ctx.globalAlpha = 1;
+
+    // Two lanes:
+    //   top   = the selected speed
+    //   bottom= walking pace (3 km/h) for visual reference
+    const laneTopY = 24;
+    const laneBotY = H - 28;
+
+    // lane labels
+    ctx.fillStyle = '#7dd3c0';
+    ctx.globalAlpha = 0.95;
+    ctx.font = '11px monospace';
+    ctx.fillText('M ' + M.toFixed(1), 2, laneTopY - 8);
+    ctx.fillStyle = textColor;
+    ctx.globalAlpha = 0.7;
+    ctx.fillText('walking',  2, laneBotY + 16);
+    ctx.globalAlpha = 1;
+
+    // wall-clock seconds since the loop started
+    const elapsed = (now - startMs) / 1000;
+
+    // how long it takes the fast dot to cross 1 km
+    const cycleTopS = oneKmM / v;
+    // walking pace cycle
+    const cycleBotS = oneKmM / walkMs;
+
+    // top dot — modulo so it loops
+    const fTop = (elapsed % cycleTopS) / cycleTopS;
+    const xTop = padL + fTop * plotW;
+
+    // bottom dot
+    const fBot = (elapsed % cycleBotS) / cycleBotS;
+    const xBot = padL + fBot * plotW;
+
+    // motion-blur trail for the fast dot: a series of softer dots behind it
+    // The faster the dot, the more "ghosts" pile up in one frame.
+    const trailDur = Math.min(0.045, cycleTopS * 0.8);  // 45 ms trail max
+    const ghosts = 14;
+    for (let i = ghosts; i > 0; i--) {
+      const tBack = (i / ghosts) * trailDur;
+      const fG = ((elapsed - tBack) % cycleTopS + cycleTopS) % cycleTopS / cycleTopS;
+      const xG = padL + fG * plotW;
+      ctx.beginPath();
+      ctx.arc(xG, laneTopY, 5 - i * 0.18, 0, Math.PI * 2);
+      ctx.fillStyle = '#7dd3c0';
+      ctx.globalAlpha = (1 - i / ghosts) * 0.45;
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // top dot itself
+    ctx.beginPath();
+    ctx.arc(xTop, laneTopY, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#7dd3c0';
+    ctx.shadowColor = '#7dd3c0';
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // bottom dot
+    ctx.beginPath();
+    ctx.arc(xBot, laneBotY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#6c7a89';
+    ctx.fill();
+
+    requestAnimationFrame(loop);
+  }
+
+  function update() {
+    const M = parseFloat(slider.value);
+    const v = M * a30;
+    machVal.textContent = M.toFixed(1);
+
+    const card = nearestCard(M);
+    objEl.innerHTML = '≈ ' + card.name + ' <span class="sub">' + card.sub + '</span>';
+
+    velEl.textContent = fmtV(v);
+    tkmEl.textContent = fmtTime(oneKmM / v);
+    tlbEl.textContent = fmtTime(londonBerlinM / v);
+
+    // highlight active preset if exact
+    document.querySelectorAll('.chart-hs-mach .preset').forEach(b => {
+      b.classList.toggle('active', Math.abs(parseFloat(b.dataset.m) - M) < 0.05);
+    });
+
+    labelEl.textContent = 'top dot · M ' + M.toFixed(1) + '  bottom dot · walking pace';
+  }
+
+  slider.addEventListener('input', update);
+  document.querySelectorAll('.chart-hs-mach .preset').forEach(b => {
+    b.addEventListener('click', () => {
+      slider.value = b.dataset.m;
+      update();
+    });
+  });
+
+  resize();
+  addEventListener('resize', () => { resize(); refreshColor(); });
+  update();
+  requestAnimationFrame(loop);
+})();
+</script>
+{% endraw %}

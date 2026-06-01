@@ -1,0 +1,134 @@
+{% raw %}
+<style>
+  .chart-hs-arsenal {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-hs-arsenal .toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.85rem;
+  }
+  .chart-hs-arsenal .switch {
+    position: relative;
+    width: 42px; height: 22px;
+    background: var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .chart-hs-arsenal .switch.on { background: #7dd3c0; }
+  .chart-hs-arsenal .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.2s;
+  }
+  .chart-hs-arsenal .switch.on::after { left: 23px; }
+  .chart-hs-arsenal .tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  .chart-hs-arsenal .tbl th {
+    text-align: left;
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    font-weight: 600;
+    font-size: 0.72rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .chart-hs-arsenal .tbl td {
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--main-border-color, rgba(127,127,127,0.22));
+    vertical-align: top;
+  }
+  .chart-hs-arsenal .tbl tr:last-child td { border-bottom: none; }
+  .chart-hs-arsenal .tbl .sys { font-weight: 600; }
+  .chart-hs-arsenal .tbl .note {
+    display: block;
+    font-size: 0.74rem;
+    opacity: 0.65;
+    margin-top: 0.15rem;
+  }
+  .chart-hs-arsenal .speed.claim { color: #c97c5d; font-variant-numeric: tabular-nums; }
+  .chart-hs-arsenal .speed.obs   { color: #7dd3c0; font-variant-numeric: tabular-nums; }
+  .chart-hs-arsenal .yes { color: #7dd3c0; }
+  .chart-hs-arsenal .no  { opacity: 0.55; }
+  .chart-hs-arsenal .caption { font-size: 0.8rem; opacity: 0.6; margin-top: 0.6rem; }
+</style>
+
+<div class="chart-hs-arsenal">
+  <div class="toggle">
+    <div class="switch" id="hs-ars-switch"></div>
+    <span id="hs-ars-label">Showing <b>observed</b> figures (independent measurements)</span>
+  </div>
+
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>System</th><th>Country</th><th>Type</th>
+        <th>Speed</th><th>Range</th><th>Maneuvering HGV?</th>
+      </tr>
+    </thead>
+    <tbody id="hs-ars-tbody"></tbody>
+  </table>
+
+</div>
+
+<script>
+  (function() {
+    const rows = [
+      { sys: 'Avangard',         c: 'RU', t: 'Boost-glide HGV (nuclear)',     claim: 'M 20–27',  obs: 'M 20+ (unverified)',  r: '>6,000 km',     hgv: true,  note: 'On UR-100NUTTKh; migrating to Sarmat' },
+      { sys: 'DF-17 / DF-ZF',    c: 'CN', t: 'MRBM-launched HGV',             claim: 'M 10',     obs: 'M 5–10',              r: '1,800–2,500 km',hgv: true,  note: 'First road-mobile HGV (2020)' },
+      { sys: 'Kh-47M2 Kinzhal',  c: 'RU', t: 'Aeroballistic (Iskander)',      claim: 'M 10',     obs: '~M 3.6 (Patriot track)', r: '~480 km',    hgv: false, note: 'Shot down by PAC-3, May 2023' },
+      { sys: '3M22 Zircon',      c: 'RU', t: 'Scramjet cruise',               claim: 'M 9',      obs: 'M 8–9',               r: '400–1,000 km',  hgv: false, note: 'Only scramjet in combat use' },
+      { sys: 'Oreshnik',         c: 'RU', t: 'IRBM with MIRV (6×6)',          claim: 'M 11',     obs: 'M 10–11 ballistic',   r: '3,500–5,500 km',hgv: false, note: 'Lofted ballistic, not a glider' },
+      { sys: 'LRHW Dark Eagle',  c: 'US', t: 'Boost-glide HGV (conventional)',claim: 'M 5+',     obs: 'M 5+ (tested)',       r: '2,775–3,500 km',hgv: true,  note: 'First US battery activated Dec 2025' },
+      { sys: 'HACM',             c: 'US', t: 'Scramjet cruise (air-launch)',  claim: 'M 5+',     obs: 'in development',      r: 'classified',    hgv: false, note: '' },
+    ];
+
+    const tbody = document.getElementById('hs-ars-tbody');
+    const sw    = document.getElementById('hs-ars-switch');
+    const lbl   = document.getElementById('hs-ars-label');
+    let showClaim = false;
+
+    function render() {
+      tbody.innerHTML = '';
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        const speed = showClaim ? r.claim : r.obs;
+        const speedClass = showClaim ? 'speed claim' : 'speed obs';
+        const hgvHtml = r.hgv
+          ? '<span class="yes">yes</span>'
+          : '<span class="no">no</span>';
+        const note = r.note ? `<span class="note">${r.note}</span>` : '';
+        tr.innerHTML = `
+          <td><span class="sys">${r.sys}</span>${note}</td>
+          <td>${r.c}</td>
+          <td>${r.t}</td>
+          <td class="${speedClass}">${speed}</td>
+          <td>${r.r}</td>
+          <td>${hgvHtml}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    sw.addEventListener('click', () => {
+      showClaim = !showClaim;
+      sw.classList.toggle('on', showClaim);
+      lbl.innerHTML = 'Showing <b>' + (showClaim ? 'claimed' : 'observed') + '</b> figures ('
+        + (showClaim ? 'official statements' : 'independent measurements') + ')';
+      render();
+    });
+    render();
+  })();
+</script>
+{% endraw %}

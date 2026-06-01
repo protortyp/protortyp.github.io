@@ -1,0 +1,285 @@
+{% raw %}
+<style>
+  .chart-hs-horizon {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-hs-horizon .controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    margin: 0.8rem 0 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+    background: rgba(127,127,127,0.04);
+  }
+  @media (min-width: 600px) {
+    .chart-hs-horizon .controls { grid-template-columns: 1fr 1fr; }
+  }
+  .chart-hs-horizon .control { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; }
+  .chart-hs-horizon .control-label { display: flex; justify-content: space-between; opacity: 0.85; }
+  .chart-hs-horizon .control-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .chart-hs-horizon input[type=range] { width: 100%; accent-color: #7dd3c0; }
+  .chart-hs-horizon svg { max-width: 100%; height: auto; background: transparent; }
+  .chart-hs-horizon .sub-title {
+    font-size: 0.78rem; opacity: 0.65; margin: 0.9rem 0 0.2rem;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .chart-hs-horizon .summary {
+    display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-top: 0.75rem;
+  }
+  @media (min-width: 600px) { .chart-hs-horizon .summary { grid-template-columns: repeat(3, 1fr); } }
+  .chart-hs-horizon .summary-block {
+    padding: 0.6rem 0.85rem; border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+  }
+  .chart-hs-horizon .summary-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
+  .chart-hs-horizon .summary-value { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1rem; margin-top: 0.1rem; }
+  .chart-hs-horizon .verdict-ok    .summary-value { color: #7dd3c0; }
+  .chart-hs-horizon .verdict-tight .summary-value { color: #f4a261; }
+  .chart-hs-horizon .verdict-fail  .summary-value { color: #c97c5d; }
+  .chart-hs-horizon .caption { font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; }
+  .chart-hs-horizon .gantt-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 0.78rem; opacity: 0.7; margin: 0.9rem 0 0.2rem;
+  }
+  .chart-hs-horizon .gantt-head .sub-title { margin: 0; }
+  .chart-hs-horizon .playbtn {
+    font-size: 0.75rem; padding: 0.25rem 0.6rem; cursor: pointer; background: transparent;
+    border: 1px solid #7dd3c0; color: #7dd3c0; border-radius: 4px; font-family: inherit;
+  }
+  .chart-hs-horizon .playbtn:hover { background: rgba(125,211,192,0.12); }
+</style>
+
+<div class="chart-hs-horizon">
+  <div class="controls">
+    <div class="control">
+      <span class="control-label">
+        <span>Target altitude</span>
+        <span class="control-value"><span id="hs-hor-alt-v">40</span> km</span>
+      </span>
+      <input type="range" id="hs-hor-alt" min="20" max="1000" step="1" value="40">
+    </div>
+    <div class="control">
+      <span class="control-label">
+        <span>Closing Mach</span>
+        <span class="control-value">M <span id="hs-hor-mach-v">8.0</span></span>
+      </span>
+      <input type="range" id="hs-hor-mach" min="3" max="20" step="0.5" value="8">
+    </div>
+  </div>
+
+  <div class="sub-title">Radar horizon vs altitude</div>
+  <div id="hs-hor-chart-curve"></div>
+
+  <div class="gantt-head">
+    <div class="sub-title">Defender's clock from radar acquisition</div>
+    <button class="playbtn" id="hs-hor-play">▶ Run the clock</button>
+  </div>
+  <div id="hs-hor-chart-gantt"></div>
+
+  <div class="summary">
+    <div class="summary-block">
+      <div class="summary-label">Horizon distance</div>
+      <div class="summary-value" id="hs-hor-d" style="color:#7dd3c0">·</div>
+    </div>
+    <div class="summary-block">
+      <div class="summary-label">Flight time to impact</div>
+      <div class="summary-value" id="hs-hor-tof">·</div>
+    </div>
+    <div class="summary-block" id="hs-hor-verdict-block">
+      <div class="summary-label">Engagement window</div>
+      <div class="summary-value" id="hs-hor-engage">·</div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+  const P    = window.HSPhysics;
+  const PAL  = window.HSPal;
+
+  const altInp  = document.getElementById('hs-hor-alt');
+  const machInp = document.getElementById('hs-hor-mach');
+  const altVal  = document.getElementById('hs-hor-alt-v');
+  const machVal = document.getElementById('hs-hor-mach-v');
+
+  const Re_km = 6371;
+  function horizonKm(h_km) { return Math.sqrt(2 * Re_km * h_km); }
+
+  // log-log curve points
+  const curve = [];
+  for (let h = 5; h <= 1500; h += 5) curve.push({ h, d: horizonKm(h) });
+
+  const refs = [
+    { h: 25,   label: 'Scramjet cruise' },
+    { h: 40,   label: 'HGV glide' },
+    { h: 80,   label: 'Kármán' },
+    { h: 500,  label: 'MRBM apogee' },
+    { h: 1000, label: 'ICBM apogee' },
+  ];
+
+  function drawCurve(alt, d_now) {
+    const chart = Plot.plot({
+      height: 220,
+      marginLeft: 60,
+      marginRight: 30,
+      marginBottom: 38,
+      style: { background: 'transparent', color: 'currentColor', fontFamily: 'inherit', fontSize: '11px' },
+      x: { type: 'log', label: 'Target altitude (km)', domain: [5, 1500], grid: true,
+           ticks: [10, 30, 100, 300, 1000], tickFormat: v => v + ' km' },
+      y: { type: 'log', label: 'Radar horizon (km)', domain: [200, 5000], grid: true,
+           ticks: [300, 1000, 3000], tickFormat: v => v.toLocaleString(), labelAnchor: 'top' },
+      marks: [
+        Plot.line(curve, { x: 'h', y: 'd', stroke: PAL.teal, strokeWidth: 2.5 }),
+        Plot.dot(refs, { x: 'h', y: r => horizonKm(r.h), r: 3, fill: 'currentColor', fillOpacity: 0.5 }),
+        Plot.text(refs, { x: 'h', y: r => horizonKm(r.h),
+          text: 'label', dy: -8, fill: 'currentColor', fillOpacity: 0.7, fontSize: 10 }),
+        Plot.ruleX([alt], { stroke: PAL.amber, strokeOpacity: 0.5, strokeDasharray: '3,3' }),
+        Plot.dot([{ h: alt, d: d_now }], { x: 'h', y: 'd', r: 5, fill: PAL.amber }),
+      ],
+    });
+    const el = document.getElementById('hs-hor-chart-curve');
+    el.innerHTML = ''; el.append(chart);
+  }
+
+  function drawGantt(totalT, animT) {
+    // animT = clock-second-position (or null for static fully-revealed)
+    const stages = [
+      { name: 'Track convergence', dur: 30, color: PAL.purple },
+      { name: 'Discrimination',    dur: 30, color: PAL.teal },
+      { name: 'Fire-control commit', dur: 15, color: PAL.amber },
+      { name: 'Interceptor fly-out', dur: 75, color: '#c97c5d' },
+    ];
+    const fixed = stages.reduce((s, x) => s + x.dur, 0);
+    const engage = Math.max(totalT - fixed, 0);
+
+    const data = [];
+    let t0 = 0;
+    for (const s of stages) {
+      data.push({ name: s.name, t1: t0, t2: t0 + s.dur, color: s.color });
+      t0 += s.dur;
+    }
+    data.push({
+      name: 'Engagement window',
+      t1: t0, t2: t0 + engage,
+      color: engage > 0 ? PAL.teal : PAL.gray
+    });
+
+    // when animating, dim stages that haven't started yet
+    function alphaFor(d) {
+      if (animT === null) return 0.75;
+      if (animT >= d.t2) return 0.85;          // complete
+      if (animT >  d.t1) return 0.60;          // in progress
+      return 0.18;                              // not started yet
+    }
+    const dataDim = data.map(d => ({ ...d, alpha: alphaFor(d) }));
+
+    const xMax = Math.max(totalT * 1.05, fixed * 1.15);
+    const chart = Plot.plot({
+      height: 180,
+      marginLeft: 170,
+      marginRight: 24,
+      marginBottom: 32,
+      style: { background: 'transparent', color: 'currentColor', fontFamily: 'inherit', fontSize: '11px' },
+      x: { label: 'Seconds from radar acquisition',
+           domain: [0, xMax], grid: true },
+      y: { domain: data.map(d => d.name).reverse(), label: null },
+      marks: [
+        Plot.barX(dataDim, { y: 'name', x1: 't1', x2: 't2', fill: 'color', fillOpacity: 'alpha' }),
+        Plot.text(dataDim, {
+          x: d => (d.t1 + d.t2) / 2, y: 'name',
+          text: d => (d.t2 - d.t1).toFixed(0) + ' s',
+          fill: 'currentColor', fontSize: 10, fontWeight: 700,
+          fillOpacity: d => animT === null || animT >= d.t1 ? 1 : 0.3,
+          filter: d => d.t2 - d.t1 > 8
+        }),
+        Plot.ruleX([totalT], { stroke: '#c97c5d', strokeWidth: 1.5 }),
+        Plot.text([{ x: totalT, y: data[0].name, label: 'impact' }],
+          { x: 'x', y: 'y', text: 'label', fill: '#c97c5d', fontWeight: 700,
+            textAnchor: 'end', dx: -4, fontSize: 11 }),
+        // animated "now" line
+        ...(animT !== null ? [
+          Plot.ruleX([animT], { stroke: '#7dd3c0', strokeWidth: 2.5 }),
+          Plot.text([{ x: animT, y: data[data.length - 1].name, label: 't = ' + animT.toFixed(0) + ' s' }],
+            { x: 'x', y: 'y', text: 'label', fill: '#7dd3c0', fontWeight: 700,
+              textAnchor: 'start', dx: 4, fontSize: 11 }),
+        ] : []),
+      ],
+    });
+    const el = document.getElementById('hs-hor-chart-gantt');
+    el.innerHTML = ''; el.append(chart);
+  }
+
+  function refresh() {
+    const alt = +altInp.value;
+    const M = +machInp.value;
+    altVal.textContent  = alt.toString();
+    machVal.textContent = M.toFixed(1);
+
+    const d = horizonKm(alt);
+    const a30 = P.soundSpeed(30000) / 1000;  // km/s
+    const Vclose = M * a30;
+    const tof = d / Vclose;
+    const fixed = 30 + 30 + 15 + 75;
+    const engage = Math.max(tof - fixed, 0);
+
+    document.getElementById('hs-hor-d').textContent = d.toFixed(0) + ' km';
+    document.getElementById('hs-hor-tof').textContent =
+      tof < 60 ? tof.toFixed(0) + ' s' : (tof/60).toFixed(1) + ' min';
+    document.getElementById('hs-hor-engage').textContent =
+      engage <= 0 ? 'negative' : engage.toFixed(0) + ' s';
+
+    const block = document.getElementById('hs-hor-verdict-block');
+    block.classList.remove('verdict-ok', 'verdict-tight', 'verdict-fail');
+    block.classList.add(engage <= 0 ? 'verdict-fail' : (engage < 60 ? 'verdict-tight' : 'verdict-ok'));
+
+    drawCurve(alt, d);
+    drawGantt(tof, null);
+    lastTof = tof;
+  }
+
+  /* ============================================================
+     Clock animation: sweep a "now" line from 0 to totalT
+     in real-time-scaled seconds (the reader experiences the
+     compression of the kill chain physically).
+  ============================================================ */
+  let lastTof = 0;
+  let animating = false;
+  let animStart = 0;
+  const CLOCK_SPEED = 8;  // 8× real time
+
+  function stopAnim() {
+    animating = false;
+    document.getElementById('hs-hor-play').textContent = '▶ Run the clock';
+    drawGantt(lastTof, null);
+  }
+  function playAnim() {
+    if (animating) { stopAnim(); return; }
+    animating = true;
+    animStart = performance.now();
+    document.getElementById('hs-hor-play').textContent = '◼ Stop';
+    requestAnimationFrame(tick);
+  }
+  function tick(now) {
+    if (!animating) return;
+    const elapsed = (now - animStart) / 1000 * CLOCK_SPEED;
+    if (elapsed >= lastTof) {
+      drawGantt(lastTof, lastTof);
+      stopAnim();
+      return;
+    }
+    drawGantt(lastTof, elapsed);
+    requestAnimationFrame(tick);
+  }
+
+  altInp.addEventListener('input', () => { if (animating) stopAnim(); refresh(); });
+  machInp.addEventListener('input', () => { if (animating) stopAnim(); refresh(); });
+  document.getElementById('hs-hor-play').addEventListener('click', playAnim);
+
+  refresh();
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(refresh, 150); });
+</script>
+{% endraw %}

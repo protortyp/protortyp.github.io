@@ -1,0 +1,392 @@
+{% raw %}
+<style>
+  .chart-hs-traj {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-hs-traj .ctrl-wrap {
+    padding: 0.7rem 0.9rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+    background: rgba(127,127,127,0.04);
+  }
+  .chart-hs-traj .tabs {
+    display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem;
+  }
+  .chart-hs-traj .tab {
+    flex: 1 1 0;
+    min-width: 110px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 5px;
+    padding: 0.45rem 0.7rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .chart-hs-traj .tab:hover { background: rgba(125,211,192,0.08); }
+  .chart-hs-traj .tab.active {
+    border-color: var(--tab-color, #7dd3c0);
+    background: rgba(125,211,192,0.12);
+  }
+  .chart-hs-traj .tab .t-name { font-weight: 600; }
+  .chart-hs-traj .tab .t-sub  { font-size: 0.72rem; opacity: 0.7; margin-top: 0.1rem; }
+  .chart-hs-traj .tab.active .t-name { color: var(--tab-color, #7dd3c0); }
+
+  .chart-hs-traj .sliders {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  @media (min-width: 600px) { .chart-hs-traj .sliders { grid-template-columns: 1fr 1fr; } }
+  .chart-hs-traj .slider-row {
+    display: flex; align-items: center; gap: 0.7rem;
+    font-size: 0.82rem;
+  }
+  .chart-hs-traj .slider-row label { min-width: 110px; opacity: 0.85; }
+  .chart-hs-traj .slider-row input[type=range] { flex: 1; accent-color: #7dd3c0; }
+  .chart-hs-traj .slider-row .v {
+    min-width: 80px; text-align: right;
+    font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+
+  .chart-hs-traj .panel-chart svg { max-width: 100%; height: auto; background: transparent; }
+
+  .chart-hs-traj .panel-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+  }
+  .chart-hs-traj .panel-kpis .kpi { opacity: 0.85; }
+  .chart-hs-traj .panel-kpis .kpi b {
+    display: block;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 1;
+    margin-top: 0.1rem;
+  }
+  .chart-hs-traj .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.6rem;
+  }
+</style>
+
+<div class="chart-hs-traj">
+
+  <div class="ctrl-wrap">
+    <div class="tabs" id="hs-traj-tabs">
+      <button class="tab active" data-regime="bal" style="--tab-color:#f4a261">
+        <div class="t-name">Ballistic MRBM</div>
+        <div class="t-sub">lofted arc, no lift, predictable</div>
+      </button>
+      <button class="tab" data-regime="glide" style="--tab-color:#7dd3c0">
+        <div class="t-name">Boost-glide HGV</div>
+        <div class="t-sub">low band, skip-glides on lift</div>
+      </button>
+      <button class="tab" data-regime="cruise" style="--tab-color:#b08bbb">
+        <div class="t-name">Scramjet cruise</div>
+        <div class="t-sub">powered the whole way</div>
+      </button>
+    </div>
+    <div class="sliders">
+      <div class="slider-row">
+        <label>Target range</label>
+        <input type="range" id="hs-traj-range" min="500" max="5000" step="100" value="2000">
+        <span class="v" id="hs-traj-range-v">2,000 km</span>
+      </div>
+      <div class="slider-row" id="hs-traj-regime-row">
+        <label id="hs-traj-regime-label">Burnout V₀</label>
+        <input type="range" id="hs-traj-regime-slider">
+        <span class="v" id="hs-traj-regime-v">·</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-chart" id="hs-traj-chart"></div>
+  <div class="panel-kpis" id="hs-traj-kpis"></div>
+
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+  const P    = window.HSPhysics;
+  const PAL  = window.HSPal;
+
+  /* ============================================================
+     RK4 point-mass, 2D vertical plane around a round Earth
+     state: V (m/s), gamma (rad), h (m), x (m surface-arc)
+  ============================================================ */
+  function deriv(s, cfg) {
+    const rho = P.atmosphere(s.h);
+    const g   = P.gravity(s.h);
+    const q   = 0.5 * rho * s.V * s.V;
+    const D   = q * cfg.CD * cfg.A;
+    const L   = q * cfg.CL * cfg.A;
+    const T   = cfg.thrust ? cfg.thrust(s) : 0;
+    const sG = Math.sin(s.gamma), cG = Math.cos(s.gamma);
+    return {
+      dV:     (T - D) / cfg.m - g * sG,
+      dgamma: (L / cfg.m - g * cG) / Math.max(s.V, 1) + (s.V * cG) / (P.Re + s.h),
+      dh:     s.V * sG,
+      dx:     s.V * cG * P.Re / (P.Re + s.h),
+    };
+  }
+  function simulate(cfg, opts) {
+    opts = opts || {};
+    const dt = opts.dt || 0.5;
+    const tmax = opts.tmax || 1800;
+    const xmax = (opts.xmax_km || 5500) * 1000;
+    let s = { V: cfg.V0, gamma: cfg.gamma0, h: cfg.h0, x: 0 };
+    const pts = [{ x: 0, h: s.h, V: s.V, gamma: s.gamma, t: 0 }];
+    let t = 0;
+    while (t < tmax && s.h >= 0 && s.x < xmax) {
+      const k1 = deriv(s, cfg);
+      const s2 = { V: s.V+k1.dV*dt/2, gamma: s.gamma+k1.dgamma*dt/2, h: s.h+k1.dh*dt/2, x: s.x+k1.dx*dt/2 };
+      const k2 = deriv(s2, cfg);
+      const s3 = { V: s.V+k2.dV*dt/2, gamma: s.gamma+k2.dgamma*dt/2, h: s.h+k2.dh*dt/2, x: s.x+k2.dx*dt/2 };
+      const k3 = deriv(s3, cfg);
+      const s4 = { V: s.V+k3.dV*dt,   gamma: s.gamma+k3.dgamma*dt,   h: s.h+k3.dh*dt,   x: s.x+k3.dx*dt };
+      const k4 = deriv(s4, cfg);
+      s = {
+        V:     s.V     + dt/6 * (k1.dV     + 2*k2.dV     + 2*k3.dV     + k4.dV),
+        gamma: s.gamma + dt/6 * (k1.dgamma + 2*k2.dgamma + 2*k3.dgamma + k4.dgamma),
+        h:     s.h     + dt/6 * (k1.dh     + 2*k2.dh     + 2*k3.dh     + k4.dh),
+        x:     s.x     + dt/6 * (k1.dx     + 2*k2.dx     + 2*k3.dx     + k4.dx),
+      };
+      t += dt;
+      pts.push({ x: s.x, h: s.h, V: s.V, gamma: s.gamma, t });
+    }
+    return pts;
+  }
+
+  function balCfg(V0_kms) {
+    return { m: 3000, A: 0.5, CD: 0.12, CL: 0, V0: V0_kms * 1000, gamma0: 40 * Math.PI/180, h0: 0 };
+  }
+  function glideCfg(LD) {
+    const m = 1000;
+    const CDA = m / 13000;
+    const A = 0.5;
+    const CD = CDA / A;
+    const CL = LD * CD;
+    return { m, A, CD, CL, V0: 5500, gamma0: -3 * Math.PI/180, h0: 50e3 };
+  }
+  function cruiseProfile(h_km, range_km) {
+    const h_cruise = h_km * 1000;
+    const V = 8 * P.soundSpeed(h_cruise);
+    const R = range_km * 1000;
+    const climbFrac = 0.06, diveFrac = 0.05;
+    const t_climb = (climbFrac * R) / (0.5 * V);
+    const t_cruise = ((1 - climbFrac - diveFrac) * R) / V;
+    const t_dive = (diveFrac * R) / (0.7 * V);
+    const T = t_climb + t_cruise + t_dive;
+    const pts = [];
+    const N = 200;
+    for (let i = 0; i <= N; i++) {
+      const f = i / N;
+      const x = f * R;
+      let h, v;
+      if (f < climbFrac) { const u = f / climbFrac; h = h_cruise * (1 - Math.pow(1 - u, 2)); v = 0.5*V + 0.5*V*u; }
+      else if (f < 1 - diveFrac) { h = h_cruise; v = V; }
+      else { const u = (f - (1 - diveFrac)) / diveFrac; h = h_cruise * (1 - Math.pow(u, 2)); v = V * (1 - 0.3*u); }
+      pts.push({ x, h, V: v, gamma: 0, t: f * T });
+    }
+    return pts;
+  }
+
+  function timeAt(pts, x_km) {
+    const x_m = x_km * 1000;
+    for (let i = 1; i < pts.length; i++) {
+      if (pts[i].x >= x_m) {
+        const f = (x_m - pts[i-1].x) / (pts[i].x - pts[i-1].x);
+        return pts[i-1].t + f * (pts[i].t - pts[i-1].t);
+      }
+    }
+    return null;
+  }
+  function peakAltKm(pts) { let m = 0; for (const p of pts) if (p.h > m) m = p.h; return m / 1000; }
+  function avgMach(pts, h_thresh_km) {
+    let n = 0, s = 0;
+    for (const p of pts) {
+      if (p.h < h_thresh_km * 1000) { s += P.mach(p.V, p.h); n++; }
+    }
+    return n ? s / n : 0;
+  }
+  function vAtRange(pts, x_km) {
+    const x_m = x_km * 1000;
+    for (let i = 1; i < pts.length; i++) {
+      if (pts[i].x >= x_m) return pts[i].V;
+    }
+    return null;
+  }
+
+  /* ============================================================
+     Per-regime metadata
+  ============================================================ */
+  const REGIMES = {
+    bal: {
+      name: 'Ballistic MRBM', color: PAL.amber,
+      sliderLabel: 'Burnout V₀', min: 2.5, max: 6.5, step: 0.1, default: 5.0,
+      fmt: v => v.toFixed(1) + ' km/s',
+      maxAltKm: 800,        // Y-axis upper limit when this tab is active
+      machBelowKm: 90,
+      build: v => simulate(balCfg(v), { dt: 1.0,  tmax: 1500, xmax_km: 5500 }),
+    },
+    glide: {
+      name: 'Boost-glide HGV', color: PAL.teal,
+      sliderLabel: 'Lift-to-drag', min: 1.5, max: 4.0, step: 0.1, default: 2.6,
+      fmt: v => 'L/D ' + v.toFixed(1),
+      maxAltKm: 80,
+      machBelowKm: 80,
+      build: v => simulate(glideCfg(v), { dt: 0.5, tmax: 2200, xmax_km: 5500 }),
+    },
+    cruise: {
+      name: 'Scramjet cruise', color: PAL.purple,
+      sliderLabel: 'Cruise altitude', min: 15, max: 35, step: 1, default: 25,
+      fmt: v => v + ' km',
+      maxAltKm: 40,
+      machBelowKm: 40,
+      build: (v, state) => cruiseProfile(v, state.range_km),
+    },
+  };
+
+  /* ============================================================
+     state & UI
+  ============================================================ */
+  const state = {
+    active: 'bal',
+    range_km: 2000,
+    bal_v: 5.0,
+    glide_v: 2.6,
+    cruise_v: 25,
+  };
+  function activeSliderValue() {
+    return state.active === 'bal' ? state.bal_v : state.active === 'glide' ? state.glide_v : state.cruise_v;
+  }
+  function setActiveSliderValue(v) {
+    if (state.active === 'bal')   state.bal_v   = v;
+    if (state.active === 'glide') state.glide_v = v;
+    if (state.active === 'cruise') state.cruise_v = v;
+  }
+
+  // DOM
+  const tabsEl   = document.getElementById('hs-traj-tabs');
+  const rangeInp = document.getElementById('hs-traj-range');
+  const rangeLbl = document.getElementById('hs-traj-range-v');
+  const regimeSlider = document.getElementById('hs-traj-regime-slider');
+  const regimeLabel  = document.getElementById('hs-traj-regime-label');
+  const regimeValEl  = document.getElementById('hs-traj-regime-v');
+  const chartEl   = document.getElementById('hs-traj-chart');
+  const kpisEl    = document.getElementById('hs-traj-kpis');
+
+  function syncRegimeSlider() {
+    const r = REGIMES[state.active];
+    regimeLabel.textContent = r.sliderLabel;
+    regimeSlider.min = r.min;
+    regimeSlider.max = r.max;
+    regimeSlider.step = r.step;
+    regimeSlider.value = activeSliderValue();
+    regimeValEl.textContent = r.fmt(activeSliderValue());
+    regimeSlider.style.accentColor = r.color;
+  }
+
+  function render() {
+    const active = state.active;
+    const ar = REGIMES[active];
+    const balPts    = REGIMES.bal.build(state.bal_v, state);
+    const glidePts  = REGIMES.glide.build(state.glide_v, state);
+    const cruisePts = REGIMES.cruise.build(state.cruise_v, state);
+
+    const all = { bal: balPts, glide: glidePts, cruise: cruisePts };
+
+    function asLine(pts) {
+      return pts
+        .filter(p => p.x <= state.range_km * 1.1 * 1000 && p.h >= 0)
+        .map(p => ({ x: p.x / 1000, h: p.h / 1000 }));
+    }
+    const balL    = asLine(balPts);
+    const glideL  = asLine(glidePts);
+    const cruiseL = asLine(cruisePts);
+
+    const marks = [];
+
+    // Ghost lines for inactive regimes
+    if (active !== 'bal')    marks.push(Plot.lineY(balL,    { x: 'x', y: 'h', stroke: PAL.amber,  strokeOpacity: 0.25, strokeWidth: 1.5, curve: 'monotone-x' }));
+    if (active !== 'glide')  marks.push(Plot.lineY(glideL,  { x: 'x', y: 'h', stroke: PAL.teal,   strokeOpacity: 0.25, strokeWidth: 1.5, curve: 'monotone-x' }));
+    if (active !== 'cruise') marks.push(Plot.lineY(cruiseL, { x: 'x', y: 'h', stroke: PAL.purple, strokeOpacity: 0.25, strokeWidth: 1.5, curve: 'monotone-x' }));
+
+    // Active line — solid, with subtle area fill
+    const activeData = active === 'bal' ? balL : active === 'glide' ? glideL : cruiseL;
+    marks.push(Plot.areaY(activeData, { x: 'x', y: 'h', fill: ar.color, fillOpacity: 0.12, curve: 'monotone-x' }));
+    marks.push(Plot.lineY(activeData, { x: 'x', y: 'h', stroke: ar.color, strokeWidth: 2.5, curve: 'monotone-x' }));
+
+    // Target marker
+    marks.push(Plot.ruleX([state.range_km], { stroke: PAL.gray, strokeOpacity: 0.45, strokeDasharray: '3,3' }));
+    marks.push(Plot.text([{ x: state.range_km, y: ar.maxAltKm * 0.93 }], {
+      x: 'x', y: 'y', text: () => 'target', fill: PAL.gray, dx: -4, textAnchor: 'end', fontSize: 10
+    }));
+    marks.push(Plot.ruleY([0], { stroke: 'currentColor', strokeOpacity: 0.3 }));
+
+    const chart = Plot.plot({
+      height: 320,
+      marginLeft: 60,
+      marginRight: 24,
+      marginBottom: 38,
+      style: { background: 'transparent', color: 'currentColor', fontFamily: 'inherit', fontSize: '11px' },
+      x: { label: 'Range (km)', domain: [0, state.range_km * 1.05], grid: true },
+      y: { label: 'Altitude (km)', domain: [0, ar.maxAltKm], grid: true, labelAnchor: 'top' },
+      marks,
+    });
+    chartEl.innerHTML = ''; chartEl.append(chart);
+
+    // KPIs
+    const pts = active === 'bal' ? balPts : active === 'glide' ? glidePts : cruisePts;
+    const tT = timeAt(pts, state.range_km);
+    const peak = peakAltKm(pts);
+    const M = avgMach(pts, ar.machBelowKm);
+    const vEnd = vAtRange(pts, state.range_km);
+    const fmtT = t => t === null ? '·' : (t < 60 ? t.toFixed(0) + ' s' : (t/60).toFixed(1) + ' min');
+    const fmtV = v => v === null ? '·' : (v >= 1000 ? (v/1000).toFixed(1) + ' km/s' : v.toFixed(0) + ' m/s');
+    kpisEl.innerHTML = `
+      <div class="kpi">peak alt<b>${peak.toFixed(0)} km</b></div>
+      <div class="kpi">time to target<b>${fmtT(tT)}</b></div>
+      <div class="kpi">avg Mach<b>${M ? 'M ' + M.toFixed(1) : '·'}</b></div>
+      <div class="kpi">V at target<b>${fmtV(vEnd)}</b></div>
+    `;
+  }
+
+  // Tabs
+  tabsEl.querySelectorAll('.tab').forEach(b => {
+    b.addEventListener('click', () => {
+      state.active = b.dataset.regime;
+      tabsEl.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === b));
+      syncRegimeSlider();
+      render();
+    });
+  });
+  // Range
+  rangeInp.addEventListener('input', e => {
+    state.range_km = +e.target.value;
+    rangeLbl.textContent = state.range_km.toLocaleString() + ' km';
+    render();
+  });
+  // Active regime slider
+  regimeSlider.addEventListener('input', e => {
+    const v = +e.target.value;
+    setActiveSliderValue(v);
+    regimeValEl.textContent = REGIMES[state.active].fmt(v);
+    render();
+  });
+
+  syncRegimeSlider();
+  render();
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+</script>
+{% endraw %}

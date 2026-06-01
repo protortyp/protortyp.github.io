@@ -1,0 +1,367 @@
+{% raw %}
+<style>
+  .chart-hs-int { margin: 1.5rem 0; color: var(--text-color, currentColor); }
+  .chart-hs-int .controls {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    margin: 0.8rem 0 0.6rem; padding: 0.85rem 1rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px; background: rgba(127,127,127,0.04);
+  }
+  .chart-hs-int .preset, .chart-hs-int .playbtn {
+    font-size: 0.8rem; padding: 0.35rem 0.7rem; cursor: pointer; background: transparent;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3)); border-radius: 4px; color: inherit;
+    font-family: inherit;
+  }
+  .chart-hs-int .preset:hover, .chart-hs-int .playbtn:hover { background: rgba(125,211,192,0.12); }
+  .chart-hs-int .preset.active { border-color: #7dd3c0; background: rgba(125,211,192,0.14); color: #7dd3c0; }
+  .chart-hs-int .spacer { flex: 1 1 auto; }
+  .chart-hs-int .speed-group { display: inline-flex; align-items: center; gap: 0.25rem; }
+  .chart-hs-int .speed-label { font-size: 0.72rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 0.15rem; }
+  .chart-hs-int .speed {
+    font-size: 0.74rem; padding: 0.22rem 0.45rem; cursor: pointer; background: transparent; color: inherit;
+    font-family: inherit; border: 1px solid var(--main-border-color, rgba(127,127,127,0.3)); border-radius: 3px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-hs-int .speed:hover { background: rgba(125,211,192,0.12); }
+  .chart-hs-int .speed.active { border-color: #7dd3c0; background: rgba(125,211,192,0.14); color: #7dd3c0; }
+  .chart-hs-int .playbtn { border-color: #7dd3c0; color: #7dd3c0; }
+  .chart-hs-int .blurb { font-size: 0.85rem; opacity: 0.82; margin: 0 0 0.5rem; min-height: 3.6em; line-height: 1.45; }
+  .chart-hs-int svg { max-width: 100%; height: auto; background: transparent; }
+  .chart-hs-int .legend { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin: 0.5rem 0; font-size: 0.82rem; }
+  .chart-hs-int .legend-swatch { display: inline-block; width: 16px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; }
+  .chart-hs-int .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; }
+  @media (min-width: 600px) { .chart-hs-int .summary { grid-template-columns: repeat(4, 1fr); } }
+  .chart-hs-int .summary-block { padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid var(--main-border-color, rgba(127,127,127,0.3)); }
+  .chart-hs-int .summary-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
+  .chart-hs-int .summary-value { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1rem; margin-top: 0.1rem; }
+  .chart-hs-int .v-hit   .summary-value { color: #7dd3c0; }
+  .chart-hs-int .v-tight .summary-value { color: #f4a261; }
+  .chart-hs-int .v-miss  .summary-value { color: #c97c5d; }
+  .chart-hs-int .caption { font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; }
+</style>
+
+<div class="chart-hs-int">
+  <div class="controls">
+    <button class="preset" data-scn="cruise">Patriot vs cruise missile</button>
+    <button class="preset" data-scn="hgv">Interceptor vs maneuvering HGV</button>
+    <button class="preset" data-scn="stern">Stern chase</button>
+    <span class="spacer"></span>
+    <div class="speed-group" role="group" aria-label="Playback speed">
+      <span class="speed-label">speed</span>
+      <button class="speed active" data-speed="10">10×</button>
+      <button class="speed" data-speed="20">20×</button>
+      <button class="speed" data-speed="50">50×</button>
+    </div>
+    <button class="playbtn" id="hs-int-play">▶ Play engagement</button>
+  </div>
+
+  <div class="blurb" id="hs-int-blurb"></div>
+
+  <div id="hs-int-chart"></div>
+
+  <div class="legend">
+    <span><span class="legend-swatch" style="background:#c97c5d"></span>Target track</span>
+    <span><span class="legend-swatch" style="background:#7dd3c0"></span>Interceptor</span>
+    <span>
+      Closest approach
+      <span class="legend-swatch" style="background:#7dd3c0; margin-left:6px"></span>hit
+      <span class="legend-swatch" style="background:#f4a261; margin-left:6px"></span>marginal
+      <span class="legend-swatch" style="background:#c97c5d; margin-left:6px"></span>miss
+    </span>
+  </div>
+
+  <div class="summary">
+    <div class="summary-block"><div class="summary-label">Miss distance</div><div class="summary-value" id="hs-int-miss">·</div></div>
+    <div class="summary-block"><div class="summary-label">Single-shot P<sub>k</sub></div><div class="summary-value" id="hs-int-pk">·</div></div>
+    <div class="summary-block"><div class="summary-label">Interceptor TOF</div><div class="summary-value" id="hs-int-tof">·</div></div>
+    <div class="summary-block" id="hs-int-verdict-block"><div class="summary-label">Outcome</div><div class="summary-value" id="hs-int-verdict">·</div></div>
+  </div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+  const P    = window.HSPhysics;
+  const PAL  = window.HSPal;
+
+  // Editorial lethal-radius scale for the single-shot kill-probability model.
+  // A near-certain kill within a few tens of metres, falling off beyond.
+  const SIGMA = 0.060; // km
+
+  /* Three fixed scenarios. Mach numbers map to km/s via the speed of sound at
+     30 km. gt is the target's lateral g during a single finite jink; gi is the
+     interceptor's max-g, which caps its turn rate. */
+  const SCN = {
+    cruise: {
+      mt: 2.5, gt: 0,  mi: 4.5, gi: 30, lr: 120, stern: false, jink0: 0, jinkDur: 0,
+      blurb: 'A Mach 2.5 cruise missile, flying straight, against a Mach 4.5 interceptor. Proportional navigation flies a clean collision course and meets it head-on. Against something slow and non-maneuvering, this is a solved problem.',
+    },
+    hgv: {
+      mt: 6,   gt: 12, mi: 7,   gi: 24, lr: 135, stern: false, jink0: 6, jinkDur: 6,
+      blurb: 'A Mach 6 glide vehicle that throws a hard 12 g jink as the interceptor closes. The Mach 7 interceptor is fast enough to reach it, but at 24 g it is under the roughly 3x the target’s g it would need, so the jink drags the hit out to a near-miss. One shot is not enough.',
+    },
+    stern: {
+      mt: 10,  gt: 0,  mi: 4.5, gi: 25, lr: 130, stern: true,  jink0: 0, jinkDur: 0,
+      blurb: 'A Mach 10 target against a Mach 4.5 interceptor, fired as the target passes overhead. The interceptor cannot lead what it cannot catch. All it can do is chase from behind, and the gap only grows.',
+    },
+  };
+
+  /* ============================================================
+     Planar pursuit simulator (km, km/s, s).
+     PN while closing; capped pure pursuit once past closest approach
+     (or the whole way, for a stern chase). Miss is the true closest
+     approach, scored continuously, never short-circuited.
+  ============================================================ */
+  function simulate(cfg) {
+    const dt = 0.04;
+    const SAM = { x: 0, y: 40 };
+    let tx = -300, ty = 0, theta_t = 0, t = 0;
+    const a30 = P.soundSpeed(30000) / 1000;
+    const Vt = cfg.mt * a30, Vi = cfg.mi * a30;
+    const omega_max = cfg.gi * 9.81e-3 / Vi;
+    const omega_t   = cfg.gt * 9.81e-3 / Vt;
+
+    let launched = false, t_launch = 0;
+    let ix = SAM.x, iy = SAM.y, theta_i = 0, prevLOS = 0;
+    const tpts = [], ipts = [];
+    let miss = Infinity, missPt = null, missAt = null;
+    let stepsSinceMin = 0, passed = false;
+
+    // Turn the interceptor heading toward bearing `los`, capped by the
+    // airframe's max turn rate.
+    function pursue(los) {
+      let d = los - theta_i;
+      while (d >  Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      d = Math.max(-omega_max * dt, Math.min(omega_max * dt, d));
+      theta_i += d;
+    }
+
+    for (let step = 0; step < 16000; step++) {
+      tpts.push({ x: tx, y: ty, t });
+      if (launched) ipts.push({ x: ix, y: iy, t });
+
+      // Target maneuver: a single finite jink, not a sustained turn into a circle.
+      const dtl = t - t_launch;
+      if (launched && cfg.gt > 0 && dtl > cfg.jink0 && dtl < cfg.jink0 + cfg.jinkDur) {
+        theta_t -= omega_t * dt;
+      }
+      tx += Vt * Math.cos(theta_t) * dt;
+      ty += Vt * Math.sin(theta_t) * dt;
+
+      if (!launched) {
+        const r0 = Math.hypot(tx - SAM.x, ty - SAM.y);
+        // Stern chase: hold fire until the target is abeam and opening range,
+        // so it reads as a tail chase rather than a head-on crossing.
+        if (r0 <= cfg.lr && (!cfg.stern || tx > SAM.x)) {
+          launched = true; t_launch = t;
+          if (cfg.stern) {
+            theta_i = Math.atan2(ty - SAM.y, tx - SAM.x);     // pure pursuit
+          } else {
+            const tof = r0 / Vi;                              // lead the target
+            const lx = tx + Vt * Math.cos(theta_t) * tof;
+            const ly = ty + Vt * Math.sin(theta_t) * tof;
+            theta_i = Math.atan2(ly - SAM.y, lx - SAM.x);
+          }
+          // Seed prevLOS with the true bearing to the target so the first PN
+          // step sees a real (near-zero) line-of-sight rate.
+          prevLOS = Math.atan2(ty - iy, tx - ix);
+        }
+      }
+
+      if (launched) {
+        const r = Math.hypot(tx - ix, ty - iy);
+        if (r < miss) { miss = r; missPt = { x:(tx+ix)/2, y:(ty+iy)/2 }; missAt = t; stepsSinceMin = 0; }
+        else { stepsSinceMin++; if (stepsSinceMin > 4) passed = true; }
+
+        const los = Math.atan2(ty - iy, tx - ix);
+        if (cfg.stern || passed) {
+          // Pure pursuit: the whole way for a stern chase, or the tail end of a
+          // PN run once the target has slipped past closest approach. (PN there
+          // saturates its turn rate and spirals the interceptor.)
+          pursue(los);
+        } else {
+          let dlos = los - prevLOS;
+          while (dlos >  Math.PI) dlos -= 2 * Math.PI;
+          while (dlos < -Math.PI) dlos += 2 * Math.PI;
+          let omega = 4 * (dlos / dt);
+          omega = Math.max(-omega_max, Math.min(omega_max, omega));
+          theta_i += omega * dt;
+        }
+        prevLOS = los;
+        ix += Vi * Math.cos(theta_i) * dt;
+        iy += Vi * Math.sin(theta_i) * dt;
+
+        // Time-since-launch, recomputed fresh: `dtl` above is stale on the
+        // launch step (t_launch is set mid-iteration, after dtl is read).
+        const since = t - t_launch;
+        if (cfg.stern) {
+          if (tx > 360 || since > 160) break;          // run until the target escapes
+        } else {
+          if (passed && stepsSinceMin > 12) break;     // stop just past closest approach
+          if (since > 180) break;
+        }
+      }
+
+      t += dt;
+      if (tx > 400 || tx < -400) break;
+      if (t > 500) break;
+    }
+
+    return {
+      tpts, ipts, sam: SAM, miss, missPt,
+      tof: missAt !== null ? missAt - t_launch : (launched ? t - t_launch : null),
+      launched, t_end: t,
+    };
+  }
+
+  function pkFromMiss(m) { return Math.exp(-Math.pow(m / SIGMA, 2)); }
+
+  let activeKey = 'cruise';
+  let lastResult = null, lastCfg = null, lastMissKm = null, lastPK = 0;
+
+  function recompute() {
+    lastCfg = SCN[activeKey];
+    lastResult = simulate(lastCfg);
+    lastMissKm = lastResult.miss === Infinity ? null : lastResult.miss;
+    lastPK = lastMissKm === null ? 0 : pkFromMiss(lastMissKm);
+
+    document.getElementById('hs-int-miss').textContent =
+      lastMissKm === null ? 'N/A' : (lastMissKm < 1 ? (lastMissKm*1000).toFixed(0)+' m' : lastMissKm.toFixed(1)+' km');
+    document.getElementById('hs-int-pk').textContent = (lastPK*100).toFixed(0)+'%';
+    document.getElementById('hs-int-tof').textContent = lastResult.tof === null ? '·' : lastResult.tof.toFixed(0)+' s';
+
+    const verdEl = document.getElementById('hs-int-verdict');
+    const block = document.getElementById('hs-int-verdict-block');
+    block.classList.remove('v-hit','v-tight','v-miss');
+    let v;
+    if (!lastResult.launched) { v = 'never engaged'; block.classList.add('v-miss'); }
+    else if (lastPK > 0.6)    { v = 'hit';           block.classList.add('v-hit'); }
+    else if (lastPK > 0.1)    { v = 'marginal';      block.classList.add('v-tight'); }
+    else                      { v = 'miss';          block.classList.add('v-miss'); }
+    verdEl.textContent = v;
+  }
+
+  /* ============================================================
+     Render. animTime = time up to which to draw (null = full).
+  ============================================================ */
+  function render(animTime) {
+    const r = lastResult, cfg = lastCfg;
+    const tdata = animTime === null ? r.tpts : r.tpts.filter(p => p.t <= animTime);
+    const idata = animTime === null ? r.ipts : r.ipts.filter(p => p.t <= animTime);
+
+    const ring = [];
+    for (let i = 0; i <= 80; i++) {
+      const a = i / 80 * 2 * Math.PI;
+      ring.push({ x: r.sam.x + cfg.lr * Math.cos(a), y: r.sam.y + cfg.lr * Math.sin(a) });
+    }
+
+    // launch marker: first target point that satisfies the scenario's launch rule
+    let launchPoint = null;
+    for (const p of r.tpts) {
+      const d = Math.hypot(p.x - r.sam.x, p.y - r.sam.y);
+      if (d <= cfg.lr && (!cfg.stern || p.x > r.sam.x)) { launchPoint = p; break; }
+    }
+    const launchVisible = animTime === null || (launchPoint && animTime >= launchPoint.t);
+
+    const curTgt = tdata.length > 0 ? tdata[tdata.length - 1] : null;
+    const curInt = idata.length > 0 ? idata[idata.length - 1] : null;
+    const showCurrentMarkers = animTime !== null;
+    const showMissPoint = (animTime === null || animTime >= r.t_end - 0.1) && r.missPt && lastMissKm !== null;
+
+    const chart = Plot.plot({
+      height: 360,
+      marginLeft: 56, marginRight: 16, marginBottom: 38,
+      style: { background: 'transparent', color: 'currentColor', fontFamily: 'inherit', fontSize: '11px' },
+      x: { label: 'Down-range (km)', domain: [-320, 400], grid: true },
+      y: { label: 'Cross-range (km)', domain: [-150, 250], grid: true, labelAnchor: 'top' },
+      aspectRatio: 1,
+      marks: [
+        Plot.line(ring.concat([ring[0]]), { x:'x', y:'y', stroke: PAL.teal, strokeOpacity: 0.4, strokeDasharray: '3,3' }),
+        Plot.dot([r.sam], { x:'x', y:'y', r: 6, fill: PAL.teal, symbol: 'square' }),
+        Plot.text([r.sam], { x:'x', y:'y', text: () => 'SAM', fill: PAL.teal, fontWeight: 700, fontSize: 11, dy: -14 }),
+        Plot.line(tdata, { x:'x', y:'y', stroke: '#c97c5d', strokeWidth: 2 }),
+        ...(tdata.length > 0 ? [
+          Plot.dot([tdata[0]], { x:'x', y:'y', r: 4, fill: '#c97c5d' }),
+          Plot.text([tdata[0]], { x:'x', y:'y', text: () => '→ target', fill: '#c97c5d', fontSize: 10, dy: -12, textAnchor: 'start' }),
+        ] : []),
+        ...(launchVisible && launchPoint ? [
+          Plot.dot([launchPoint], { x:'x', y:'y', r: 5, stroke: PAL.teal, fill: 'none', strokeWidth: 1.5 }),
+          Plot.text([launchPoint], { x:'x', y:'y', text: () => 'launch', fill: PAL.teal, fontSize: 10, dy: 14 }),
+        ] : []),
+        ...(idata.length > 1 ? [ Plot.line(idata, { x:'x', y:'y', stroke: PAL.teal, strokeWidth: 2 }) ] : []),
+        ...(showCurrentMarkers && curTgt ? [ Plot.dot([curTgt], { x:'x', y:'y', r: 6, fill: '#c97c5d', stroke: 'white', strokeWidth: 1.5 }) ] : []),
+        ...(showCurrentMarkers && curInt ? [ Plot.dot([curInt], { x:'x', y:'y', r: 6, fill: PAL.teal, stroke: 'white', strokeWidth: 1.5 }) ] : []),
+        ...(showMissPoint ? (() => {
+          const col  = lastPK > 0.6 ? PAL.teal : lastPK > 0.1 ? PAL.amber : '#c97c5d';
+          const word = lastPK > 0.6 ? 'hit'    : lastPK > 0.1 ? 'marginal' : 'miss';
+          const distStr = lastMissKm < 1 ? (lastMissKm*1000).toFixed(0)+' m' : lastMissKm.toFixed(1)+' km';
+          return [
+            Plot.dot([r.missPt], { x:'x', y:'y', r: 6, fill: col }),
+            Plot.text([r.missPt], { x:'x', y:'y', dy: -12, text: () => word + ' · ' + distStr, fill: col, fontSize: 10, fontWeight: 600 }),
+          ];
+        })() : []),
+      ],
+    });
+    const el = document.getElementById('hs-int-chart');
+    el.innerHTML = ''; el.append(chart);
+  }
+
+  /* ============================================================ Animation */
+  let animating = false, animStartWall = 0, animStartSim = 0, animSpeed = 10;
+  function playAnim() {
+    if (!lastResult) return;
+    animating = true;
+    animStartWall = performance.now();
+    animStartSim = lastResult.tpts[0]?.t || 0;
+    document.getElementById('hs-int-play').textContent = '◼ Stop';
+    requestAnimationFrame(animTick);
+  }
+  function stopAnim(showFinal) {
+    animating = false;
+    document.getElementById('hs-int-play').textContent = '▶ Play engagement';
+    if (showFinal) render(null);
+  }
+  function animTick() {
+    if (!animating) return;
+    const elapsed = (performance.now() - animStartWall) / 1000;
+    const simT = animStartSim + elapsed * animSpeed;
+    if (simT >= lastResult.t_end) { stopAnim(true); return; }
+    render(simT);
+    requestAnimationFrame(animTick);
+  }
+
+  /* ============================================================ Wiring */
+  function setScenario(key) {
+    activeKey = key;
+    document.querySelectorAll('.chart-hs-int .preset').forEach(b =>
+      b.classList.toggle('active', b.dataset.scn === key));
+    document.getElementById('hs-int-blurb').textContent = SCN[key].blurb;
+    if (animating) stopAnim(false);
+    recompute();
+    render(null);
+  }
+  document.querySelectorAll('.chart-hs-int .preset').forEach(b =>
+    b.addEventListener('click', () => setScenario(b.dataset.scn)));
+
+  document.querySelectorAll('.chart-hs-int .speed').forEach(b => {
+    b.addEventListener('click', () => {
+      const newSpeed = +b.dataset.speed;
+      if (animating && lastResult) {
+        const elapsed = (performance.now() - animStartWall) / 1000;
+        animStartSim = animStartSim + elapsed * animSpeed;
+        animStartWall = performance.now();
+      }
+      animSpeed = newSpeed;
+      document.querySelectorAll('.chart-hs-int .speed').forEach(x =>
+        x.classList.toggle('active', +x.dataset.speed === newSpeed));
+    });
+  });
+
+  document.getElementById('hs-int-play').addEventListener('click', () => {
+    if (animating) stopAnim(true); else playAnim();
+  });
+
+  setScenario('cruise');
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => render(null), 150); });
+</script>
+{% endraw %}

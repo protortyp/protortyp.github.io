@@ -1,0 +1,161 @@
+{% raw %}
+<style>
+  .anim-hs-skip {
+    margin: 1.25rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .anim-hs-skip canvas {
+    display: block;
+    width: 100%;
+    height: 220px;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgba(125,211,192,0.025), transparent);
+  }
+  .anim-hs-skip .caption {
+    font-size: 0.78rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+</style>
+
+<div class="anim-hs-skip">
+  <canvas id="hs-skip-canvas"></canvas>
+</div>
+
+<script>
+(function() {
+  const cv = document.getElementById('hs-skip-canvas');
+  const ctx = cv.getContext('2d');
+
+  // canvas treats 'currentColor' as black; read the real computed text colour instead
+  let textColor = '#aab';
+  function refreshColor() {
+    textColor = getComputedStyle(cv).color || '#aab';
+  }
+  refreshColor();
+
+  function resize() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = cv.clientWidth * dpr;
+    cv.height = cv.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    refreshColor();
+  }
+  resize();
+  addEventListener('resize', resize);
+
+  const PAL = { teal: '#7dd3c0', amber: '#f4a261', dim: '#6c7a89' };
+
+  /* glide path: y = baseline - amplitude*(damped sin) - slow descent
+     f in [0, 1], altitude in "km" for display only
+  */
+  function altKm(f) {
+    const amp = 18 * Math.exp(-f * 1.8);
+    const trend = 55 - 22 * f;
+    return trend + amp * Math.sin(f * 16);
+  }
+
+  function draw(phase) {
+    const W = cv.clientWidth, H = cv.clientHeight;
+    ctx.clearRect(0, 0, W, H);
+
+    const padX = 40, padBot = 30, padTop = 20;
+    const plotW = W - 2 * padX;
+    const plotH = H - padTop - padBot;
+    const surfaceY = H - padBot;
+
+    // altitude scale: 0 km at surfaceY, 80 km at padTop
+    const altToY = a => surfaceY - (a / 80) * plotH;
+
+    // ground / Earth-curve
+    ctx.strokeStyle = PAL.dim;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, surfaceY);
+    for (let x = 0; x <= W; x += 12) {
+      const f = x / W;
+      const sag = 6 * Math.sin(Math.PI * f);
+      ctx.lineTo(x, surfaceY + sag);
+    }
+    ctx.stroke();
+
+    // altitude reference dashes (20 km, 60 km)
+    ctx.save();
+    ctx.setLineDash([3, 5]);
+    ctx.strokeStyle = PAL.dim;
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(padX, altToY(20)); ctx.lineTo(W - padX, altToY(20));
+    ctx.moveTo(padX, altToY(60)); ctx.lineTo(W - padX, altToY(60));
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = PAL.dim;
+    ctx.font = '10px monospace';
+    ctx.globalAlpha = 0.7;
+    ctx.fillText('60 km', 4, altToY(60) + 3);
+    ctx.fillText('20 km', 4, altToY(20) + 3);
+    ctx.globalAlpha = 1;
+
+    // full path drawn faintly
+    ctx.strokeStyle = PAL.teal;
+    ctx.globalAlpha = 0.18;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const f = i / 200;
+      const x = padX + f * plotW;
+      const y = altToY(altKm(f));
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // active trail to current phase
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = PAL.teal;
+    ctx.beginPath();
+    const steps = Math.max(2, Math.floor(phase * 200));
+    for (let i = 0; i <= steps; i++) {
+      const f = (i / 200);
+      const x = padX + f * plotW;
+      const y = altToY(altKm(f));
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // glider (current position dot + glow)
+    const f_now = phase;
+    const x_now = padX + f_now * plotW;
+    const a_now = altKm(f_now);
+    const y_now = altToY(a_now);
+    ctx.save();
+    ctx.fillStyle = PAL.teal;
+    ctx.shadowColor = PAL.teal;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(x_now, y_now, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // altitude readout near glider
+    ctx.fillStyle = textColor;
+    ctx.globalAlpha = 0.75;
+    ctx.font = '11px monospace';
+    ctx.fillText(a_now.toFixed(0) + ' km', x_now + 10, y_now - 6);
+    ctx.globalAlpha = 1;
+  }
+
+  let start = null;
+  const PERIOD_MS = 8000; // 8 s per loop
+  function loop(now) {
+    if (start === null) start = now;
+    const phase = ((now - start) % PERIOD_MS) / PERIOD_MS;
+    draw(phase);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+{% endraw %}

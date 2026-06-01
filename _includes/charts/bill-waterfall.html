@@ -1,0 +1,140 @@
+{% raw %}
+<style>
+  .chart-bill-waterfall {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-bill-waterfall svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+  }
+  .chart-bill-waterfall .caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+  .chart-bill-waterfall .totals {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    margin: 0.75rem 0;
+  }
+  @media (min-width: 600px) {
+    .chart-bill-waterfall .totals { grid-template-columns: repeat(3, 1fr); }
+  }
+  .chart-bill-waterfall .total-block {
+    padding: 0.7rem 0.9rem;
+    border-radius: 6px;
+    border: 1px solid var(--main-border-color, rgba(127, 127, 127, 0.3));
+  }
+  .chart-bill-waterfall .total-label {
+    font-size: 0.72rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .chart-bill-waterfall .total-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+    margin-top: 0.15rem;
+  }
+  .chart-bill-waterfall .total-sub {
+    font-size: 0.78rem;
+    opacity: 0.75;
+    margin-top: 0.1rem;
+  }
+  .chart-bill-waterfall .total-block.energy .total-value { color: #5a8fb8; }
+  .chart-bill-waterfall .total-block.grid   .total-value { color: #f4a261; }
+  .chart-bill-waterfall .total-block.state  .total-value { color: #d97b66; }
+</style>
+
+<div class="chart-bill-waterfall">
+  <div class="totals">
+    <div class="total-block energy">
+      <div class="total-label">Energy</div>
+      <div class="total-value">16.0 ct/kWh</div>
+      <div class="total-sub">wholesale + supplier margin · 40%</div>
+    </div>
+    <div class="total-block grid">
+      <div class="total-label">Grid</div>
+      <div class="total-value">10.9 ct/kWh</div>
+      <div class="total-sub">network fees + metering · 28%</div>
+    </div>
+    <div class="total-block state">
+      <div class="total-label">State</div>
+      <div class="total-value">12.7 ct/kWh</div>
+      <div class="total-sub">taxes, levies, VAT · 32%</div>
+    </div>
+  </div>
+
+  <div id="chart-bill-waterfall"></div>
+</div>
+
+<script type="module">
+  const Plot = await import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm");
+
+  const segments = [
+    { layer: "Energy", x1:  0.0, x2: 16.0, value: 16.0, color: "#5a8fb8" },
+    { layer: "Grid",   x1: 16.0, x2: 26.9, value: 10.9, color: "#f4a261" },
+    { layer: "State",  x1: 26.9, x2: 39.6, value: 12.7, color: "#d97b66" }
+  ];
+
+  function render() {
+    const isNarrow = window.innerWidth < 600;
+    const chart = Plot.plot({
+      marginLeft: 18,
+      marginRight: 18,
+      marginTop: 16,
+      marginBottom: 36,
+      height: 110,
+      style: {
+        background: "transparent",
+        color: "currentColor",
+        fontFamily: "inherit",
+        fontSize: isNarrow ? "11px" : "13px"
+      },
+      x: {
+        label: "ct / kWh",
+        labelAnchor: "right",
+        domain: [0, 40],
+        ticks: [0, 8, 16, 24, 32, 39.6],
+        tickFormat: d => d === 39.6 ? "39.6" : String(d),
+        grid: false
+      },
+      y: { axis: null, domain: [0, 1] },
+      marks: [
+        Plot.rect(segments, {
+          x1: "x1",
+          x2: "x2",
+          y1: 0.1,
+          y2: 0.9,
+          fill: "color"
+        }),
+        Plot.text(segments, {
+          x: d => (d.x1 + d.x2) / 2,
+          y: 0.5,
+          text: d => `${d.layer}  ${d.value}`,
+          fill: "white",
+          fontWeight: 700,
+          fontSize: isNarrow ? 11 : 13
+        }),
+        Plot.ruleX([39.6], { stroke: "currentColor", strokeOpacity: 0.4 })
+      ]
+    });
+
+    const container = document.getElementById("chart-bill-waterfall");
+    container.innerHTML = "";
+    container.append(chart);
+  }
+
+  render();
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 150);
+  });
+</script>
+{% endraw %}

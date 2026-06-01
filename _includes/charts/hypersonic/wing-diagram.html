@@ -1,0 +1,527 @@
+{% raw %}
+<style>
+  .chart-hs-aoa {
+    margin: 1.5rem 0;
+    color: var(--text-color, currentColor);
+  }
+  .chart-hs-aoa .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+    align-items: stretch;
+  }
+  @media (min-width: 760px) {
+    .chart-hs-aoa .row { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+  }
+  .chart-hs-aoa canvas {
+    display: block; width: 100%; height: 320px;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+    background:
+      radial-gradient(ellipse at 40% 50%, rgba(40,50,60,0.06), transparent 70%),
+      linear-gradient(180deg, rgba(125,211,192,0.03), rgba(108,122,137,0.04));
+  }
+  .chart-hs-aoa .ctrl-wrap {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+    border-radius: 6px;
+    background: rgba(127,127,127,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .chart-hs-aoa .ctrl { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; }
+  .chart-hs-aoa .ctrl-label { display: flex; justify-content: space-between; opacity: 0.85; }
+  .chart-hs-aoa .ctrl-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .chart-hs-aoa input[type=range] { width: 100%; accent-color: #7dd3c0; }
+  .chart-hs-aoa .summary {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem;
+  }
+  .chart-hs-aoa .summary-block {
+    padding: 0.5rem 0.7rem; border-radius: 5px;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+  }
+  .chart-hs-aoa .summary-label { font-size: 0.65rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
+  .chart-hs-aoa .summary-value { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 0.95rem; margin-top: 0.1rem; }
+  .chart-hs-aoa .v-lift  .summary-value { color: #7dd3c0; }
+  .chart-hs-aoa .v-drag  .summary-value { color: #c97c5d; }
+  .chart-hs-aoa .v-ratio .summary-value { color: #b08bbb; }
+  .chart-hs-aoa .state-block {
+    padding: 0.5rem 0.7rem; border-radius: 5px; text-align: center;
+    border: 1px solid var(--main-border-color, rgba(127,127,127,0.3));
+  }
+  .chart-hs-aoa .state-block.stalled {
+    border-color: #c97c5d;
+    background: rgba(201,124,93,0.10);
+  }
+  .chart-hs-aoa .state-block .state-label { font-size: 0.65rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; }
+  .chart-hs-aoa .state-block .state-value { font-weight: 700; font-size: 0.95rem; margin-top: 0.1rem; }
+  .chart-hs-aoa .state-block.stalled .state-value { color: #c97c5d; }
+  .chart-hs-aoa .state-block:not(.stalled) .state-value { color: #7dd3c0; }
+  .chart-hs-aoa .caption { font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem; }
+</style>
+
+<div class="chart-hs-aoa">
+  <div class="row">
+    <canvas id="hs-aoa-canvas"></canvas>
+    <div class="ctrl-wrap">
+      <div class="ctrl">
+        <span class="ctrl-label">
+          <span>Angle of attack α</span>
+          <span class="ctrl-value"><span id="hs-aoa-v">8</span>°</span>
+        </span>
+        <input type="range" id="hs-aoa" min="-4" max="22" step="0.5" value="8">
+      </div>
+      <div class="summary">
+        <div class="summary-block v-lift">
+          <div class="summary-label">Lift</div>
+          <div class="summary-value" id="hs-aoa-lift-v">·</div>
+        </div>
+        <div class="summary-block v-drag">
+          <div class="summary-label">Drag</div>
+          <div class="summary-value" id="hs-aoa-drag-v">·</div>
+        </div>
+        <div class="summary-block v-ratio">
+          <div class="summary-label">L / D</div>
+          <div class="summary-value" id="hs-aoa-ld-v">·</div>
+        </div>
+      </div>
+      <div class="state-block" id="hs-aoa-state-block">
+        <div class="state-label">Flow state</div>
+        <div class="state-value" id="hs-aoa-state">attached</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const cv      = document.getElementById('hs-aoa-canvas');
+  const ctx     = cv.getContext('2d');
+  const slider  = document.getElementById('hs-aoa');
+  const valLbl  = document.getElementById('hs-aoa-v');
+  const liftLbl = document.getElementById('hs-aoa-lift-v');
+  const dragLbl = document.getElementById('hs-aoa-drag-v');
+  const ldLbl   = document.getElementById('hs-aoa-ld-v');
+  const stateEl = document.getElementById('hs-aoa-state');
+  const stateBl = document.getElementById('hs-aoa-state-block');
+
+  // canvas treats 'currentColor' as black; read the real computed text colour
+  let textColor = '#aab';
+  function refreshColor() { textColor = getComputedStyle(cv).color || '#aab'; }
+  refreshColor();
+
+  let dpr = 1;
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width  = cv.clientWidth  * dpr;
+    cv.height = cv.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    refreshColor();
+    setupTransform();
+    initParticles();
+  }
+  addEventListener('resize', resize);
+
+  /* ============================================================
+     Joukowski airfoil flow · the classical complex-analysis trick.
+     A circle in the ζ-plane maps to an airfoil in the z-plane via
+     z = ζ + 1/ζ. The flow past the circle is analytic, and we
+     pull velocities back to the z-plane through dw/dz = (dw/dζ)·(dζ/dz).
+     Kutta condition gives circulation Γ = -4π·U·a·sin(α + β).
+  ============================================================ */
+  const EPSILON   = 0.10;                                 // thickness offset
+  const DELTA     = 0.06;                                 // camber offset
+  const CIRCLE_CX = -EPSILON;
+  const CIRCLE_CY =  DELTA;
+  const CIRCLE_R  = Math.sqrt((1 + EPSILON)*(1 + EPSILON) + DELTA*DELTA);
+  const BETA      = Math.atan(DELTA / (1 + EPSILON));    // zero-lift angle offset
+
+  // Aerodynamic readout (matched to the visible flow, not pulled from the Joukowski math)
+  function aero(alphaDeg) {
+    const stallDeg = 16;
+    const CL_max   = 1.2;
+    let CL;
+    if (alphaDeg <= stallDeg) CL = CL_max * (alphaDeg / stallDeg);
+    else {
+      const drop = Math.min((alphaDeg - stallDeg) / 14, 1);
+      CL = CL_max * (1 - 0.6 * drop);
+    }
+    let CD = 0.08 + 0.04 * alphaDeg * alphaDeg / 25;
+    if (alphaDeg > stallDeg) CD += 0.4 * (alphaDeg - stallDeg) / 14;
+    return { CL, CD };
+  }
+
+  // dw/dz at point z = (xm, ym) in the airfoil (z) plane, for AoA alpha (radians)
+  function velMath(xm, ym, alpha) {
+    // 1. inverse map z → ζ via ζ² − z·ζ + 1 = 0
+    //    ζ = (z ± √(z²−4))/2 · take the root with |ζ| > 1 (outside the body)
+    const dr = xm*xm - ym*ym - 4;
+    const di = 2*xm*ym;
+    const dMag = Math.sqrt(Math.hypot(dr, di));
+    const dArg = Math.atan2(di, dr) / 2;
+    const sr   = dMag * Math.cos(dArg);
+    const si   = dMag * Math.sin(dArg);
+    const c1r  = (xm + sr) * 0.5, c1i = (ym + si) * 0.5;
+    const c2r  = (xm - sr) * 0.5, c2i = (ym - si) * 0.5;
+    const m1   = c1r*c1r + c1i*c1i;
+    const m2   = c2r*c2r + c2i*c2i;
+    const zetaR = m1 > m2 ? c1r : c2r;
+    const zetaI = m1 > m2 ? c1i : c2i;
+
+    // 2. shift to circle-centered frame ζ' = ζ − center
+    const zpR = zetaR - CIRCLE_CX;
+    const zpI = zetaI - CIRCLE_CY;
+
+    // 3. Kutta circulation
+    const Gamma = -4 * Math.PI * CIRCLE_R * Math.sin(alpha + BETA);
+
+    // dw/dζ  =  e^(-iα)  −  a²·e^(iα)/ζ'²  +  Γ/(2πi·ζ')
+    const t1R = Math.cos(alpha),  t1I = -Math.sin(alpha);
+
+    const zp2R   = zpR*zpR - zpI*zpI;
+    const zp2I   = 2*zpR*zpI;
+    const zp2M2  = zp2R*zp2R + zp2I*zp2I;
+    if (zp2M2 < 1e-12) return { um: 0, vm: 0 };
+    const invR   = zp2R / zp2M2;
+    const invI   = -zp2I / zp2M2;
+    const Ua2    = CIRCLE_R * CIRCLE_R;
+    const cA     = Math.cos(alpha), sA = Math.sin(alpha);
+    const t2R    = Ua2 * (cA * invR - sA * invI);
+    const t2I    = Ua2 * (cA * invI + sA * invR);
+
+    const zpM2   = zpR*zpR + zpI*zpI;
+    if (zpM2 < 1e-12) return { um: 0, vm: 0 };
+    const t3R    = (Gamma / (2*Math.PI)) * (-zpI / zpM2);
+    const t3I    = (Gamma / (2*Math.PI)) * (-zpR / zpM2);
+
+    const dwdcR  = t1R - t2R + t3R;
+    const dwdcI  = t1I - t2I + t3I;
+
+    // dζ/dz = 1 / (dz/dζ). dz/dζ = 1 − 1/ζ²
+    const cz2R   = zetaR*zetaR - zetaI*zetaI;
+    const cz2I   = 2*zetaR*zetaI;
+    const cz2M2  = cz2R*cz2R + cz2I*cz2I;
+    if (cz2M2 < 1e-12) return { um: 0, vm: 0 };
+    const invC2R = cz2R / cz2M2, invC2I = -cz2I / cz2M2;
+    const dzdcR  = 1 - invC2R, dzdcI = -invC2I;
+    const dzdcM2 = dzdcR*dzdcR + dzdcI*dzdcI;
+    if (dzdcM2 < 1e-12) return { um: 0, vm: 0 };
+    const dcdzR  = dzdcR / dzdcM2, dcdzI = -dzdcI / dzdcM2;
+
+    // dw/dz = (dw/dζ)·(dζ/dz)
+    const dwdzR  = dwdcR * dcdzR - dwdcI * dcdzI;
+    const dwdzI  = dwdcR * dcdzI + dwdcI * dcdzR;
+
+    // u = Re(dw/dz), v = -Im(dw/dz)  (math frame, y-up)
+    return { um: dwdzR, vm: -dwdzI };
+  }
+
+  // Forward Joukowski map for drawing the airfoil
+  function jmap(zr, zi) {
+    const m2 = zr*zr + zi*zi;
+    if (m2 < 1e-12) return { x: zr, y: zi };
+    return { x: zr + zr/m2, y: zi - zi/m2 };
+  }
+  // Cached airfoil outline points (math frame)
+  const AIRFOIL = (() => {
+    const out = [];
+    const N = 120;
+    for (let i = 0; i <= N; i++) {
+      const t = 2*Math.PI * i / N;
+      const zR = CIRCLE_CX + CIRCLE_R * Math.cos(t);
+      const zI = CIRCLE_CY + CIRCLE_R * Math.sin(t);
+      out.push(jmap(zR, zI));
+    }
+    return out;
+  })();
+
+  /* ============================================================
+     Coordinate transform
+     ============================================================
+     We do all math in a "math frame" where x→right, y→up, wing
+     chord on the x-axis. The freestream comes in at angle α above
+     the chord. For display we rotate by −α so the freestream is
+     horizontal in canvas and the wing tilts.
+
+     mathToCanvas: math (x,y) → canvas (px, py)
+     velMathToCanvas: (u,v) in math units → (uc, vc) in canvas px/s
+  ============================================================ */
+  let CX, CY, SCALE;
+  function setupTransform() {
+    const W = cv.clientWidth, H = cv.clientHeight;
+    CX = W * 0.46;
+    CY = H * 0.52;
+    SCALE = Math.min(W / 6.6, H / 3.2);
+  }
+
+  function mathToCanvas(xm, ym, alpha) {
+    const cA = Math.cos(alpha), sA = Math.sin(alpha);
+    const xp =  xm * cA + ym * sA;
+    const yp = -xm * sA + ym * cA;
+    return { px: CX + xp * SCALE, py: CY - yp * SCALE };
+  }
+  function velMathToCanvas(um, vm, alpha) {
+    const cA = Math.cos(alpha), sA = Math.sin(alpha);
+    const up =  um * cA + vm * sA;
+    const vp = -um * sA + vm * cA;
+    return { uc: up * SCALE, vc: -vp * SCALE };
+  }
+
+  /* ============================================================
+     Particles · stored in math frame but spawned/bounded in canvas
+     frame, so the flow visually fills the canvas left-to-right
+     regardless of α.
+  ============================================================ */
+  const N_PARTICLES = 900;
+  const particles   = [];
+
+  // canvas (px, py) → math (x, y) using current α
+  function canvasToMath(px, py, alpha) {
+    const xp =  (px - CX) / SCALE;
+    const yp = -(py - CY) / SCALE;
+    const cA = Math.cos(alpha), sA = Math.sin(alpha);
+    return { x: xp * cA - yp * sA, y: xp * sA + yp * cA };
+  }
+
+  function spawnAtCanvasLeft(alpha) {
+    const H = cv.clientHeight;
+    const px = -8 - Math.random() * 14;     // just outside the left edge
+    const py = Math.random() * H;
+    const m = canvasToMath(px, py, alpha);
+    return {
+      x: m.x, y: m.y,
+      age: 0,
+      maxAge: 4 + Math.random() * 3,
+    };
+  }
+  function spawnAnywhere(alpha) {
+    const W = cv.clientWidth, H = cv.clientHeight;
+    const px = Math.random() * W;
+    const py = Math.random() * H;
+    const m = canvasToMath(px, py, alpha);
+    return {
+      x: m.x, y: m.y,
+      age: Math.random() * 2,
+      maxAge: 4 + Math.random() * 3,
+    };
+  }
+  function initParticles() {
+    particles.length = 0;
+    const a = parseFloat(slider.value) * Math.PI / 180;
+    for (let i = 0; i < N_PARTICLES; i++) particles.push(spawnAnywhere(a));
+  }
+
+  function airfoilHit(x, y) {
+    // Simple in/out test: map z → ζ, check |ζ − center| < R + small margin.
+    // Faster than a polygon test, exactly captures the Joukowski body.
+    const dr = x*x - y*y - 4;
+    const di = 2*x*y;
+    const dMag = Math.sqrt(Math.hypot(dr, di));
+    const dArg = Math.atan2(di, dr) / 2;
+    const sr = dMag * Math.cos(dArg), si = dMag * Math.sin(dArg);
+    const c1r = (x + sr) * 0.5, c1i = (y + si) * 0.5;
+    const c2r = (x - sr) * 0.5, c2i = (y - si) * 0.5;
+    const m1  = c1r*c1r + c1i*c1i;
+    const m2  = c2r*c2r + c2i*c2i;
+    const zr = m1 > m2 ? c1r : c2r;
+    const zi = m1 > m2 ? c1i : c2i;
+    const dx = zr - CIRCLE_CX, dy = zi - CIRCLE_CY;
+    return (dx*dx + dy*dy) < (CIRCLE_R * CIRCLE_R + 0.005);
+  }
+
+  function updateParticles(dt, alpha, stallStrength) {
+    const SPEED   = 1.0;
+    const W = cv.clientWidth, H = cv.clientHeight;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const v = velMath(p.x, p.y, alpha);
+
+      // stall: above-wing flow detaches into a chaotic recirculation zone
+      if (stallStrength > 0 && p.y > -0.05 && p.x > -0.9 && p.x < 2.2) {
+        const above = Math.max(0, p.y);
+        const w = stallStrength * Math.exp(-above * 1.5);
+        v.um = v.um * (1 - w * 0.5) + (Math.random() - 0.5) * 1.6 * w;
+        v.vm = v.vm * (1 - w * 0.5) + (Math.random() - 0.5) * 1.4 * w
+                                    - 0.4 * w;
+      }
+
+      // RK2: half-step velocity for accuracy near the body
+      const halfX = p.x + v.um * dt * 0.5 * SPEED;
+      const halfY = p.y + v.vm * dt * 0.5 * SPEED;
+      const v2 = velMath(halfX, halfY, alpha);
+
+      p.x += v2.um * dt * SPEED;
+      p.y += v2.vm * dt * SPEED;
+      p.age += dt;
+
+      // Bounds check in canvas frame so the field stays full to the edges
+      const c = mathToCanvas(p.x, p.y, alpha);
+      const offCanvas = c.px > W + 30 || c.px < -30 || c.py < -30 || c.py > H + 30;
+      const off = offCanvas || (p.age > p.maxAge) || airfoilHit(p.x, p.y);
+      if (off) {
+        const fresh = spawnAtCanvasLeft(alpha);
+        p.x = fresh.x; p.y = fresh.y;
+        p.age = 0; p.maxAge = fresh.maxAge;
+      }
+    }
+  }
+
+  /* ============================================================
+     Render
+  ============================================================ */
+  function draw(alphaDeg) {
+    const alpha          = alphaDeg * Math.PI / 180;
+    const stalled        = alphaDeg > 16;
+    const stallStrength  = stalled ? Math.min(1, (alphaDeg - 16) / 6) : 0;
+
+    const W = cv.clientWidth, H = cv.clientHeight;
+    ctx.clearRect(0, 0, W, H);
+
+    // --- 1. Particles as short streaks ----------------------------------
+    // Computing the streak length from local speed (faster particles = longer streaks)
+    const STREAK_DT = 0.08;     // seconds of "tail"
+    for (const p of particles) {
+      // sample velocity right at the particle to get streak direction
+      const v = velMath(p.x, p.y, alpha);
+
+      // streak in math frame
+      const tailX = p.x - v.um * STREAK_DT;
+      const tailY = p.y - v.vm * STREAK_DT;
+      const head  = mathToCanvas(p.x, p.y, alpha);
+      const tail  = mathToCanvas(tailX, tailY, alpha);
+
+      const isTop = p.y > 0;
+      const speedMag = Math.hypot(v.um, v.vm);
+      const alpha2   = Math.min(1, 0.35 + 0.45 * Math.min(1, speedMag / 2));
+
+      let color;
+      if (stallStrength > 0 && isTop && p.x > -0.6 && p.x < 2.2) {
+        // turbulence zone
+        color = `rgba(201, 124, 93, ${alpha2 * 0.65})`;
+      } else if (isTop) {
+        color = `rgba(125, 211, 192, ${alpha2})`;
+      } else {
+        color = `rgba(176, 139, 187, ${alpha2 * 0.85})`;
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(tail.px, tail.py);
+      ctx.lineTo(head.px, head.py);
+      ctx.stroke();
+    }
+
+    // --- 2. Airfoil body ------------------------------------------------
+    ctx.beginPath();
+    for (let i = 0; i < AIRFOIL.length; i++) {
+      const p = mathToCanvas(AIRFOIL[i].x, AIRFOIL[i].y, alpha);
+      i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(38, 48, 56, 0.95)';
+    ctx.fill();
+    ctx.strokeStyle = '#7dd3c0';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    // --- 3. Lift and drag arrows ---------------------------------------
+    const { CL, CD } = aero(alphaDeg);
+    const wingC = mathToCanvas(0, 0, alpha);
+
+    // lift: upward in canvas (perpendicular to freestream)
+    const liftLen = Math.max(0, CL) * 88;
+    if (liftLen > 2) {
+      const baseY = wingC.py - 14;
+      const tipY  = baseY - liftLen;
+      ctx.strokeStyle = stalled ? 'rgba(125,211,192,0.4)' : '#7dd3c0';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(wingC.px, baseY); ctx.lineTo(wingC.px, tipY); ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath();
+      ctx.moveTo(wingC.px, tipY - 8);
+      ctx.lineTo(wingC.px - 5, tipY + 2);
+      ctx.lineTo(wingC.px + 5, tipY + 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('LIFT', wingC.px + 8, tipY + 4);
+    }
+
+    // drag: rightward (along freestream)
+    const dragLen = Math.max(0, CD) * 200;
+    if (dragLen > 2) {
+      const startX = wingC.px + 14;
+      const startY = wingC.py + 22;
+      const endX   = startX + dragLen;
+      ctx.strokeStyle = '#c97c5d';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY); ctx.lineTo(endX, startY); ctx.stroke();
+      ctx.fillStyle = '#c97c5d';
+      ctx.beginPath();
+      ctx.moveTo(endX + 8, startY);
+      ctx.lineTo(endX - 2, startY - 5);
+      ctx.lineTo(endX - 2, startY + 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('DRAG', startX + 4, startY + 16);
+    }
+
+    // --- 4. Top-left badge --------------------------------------------
+    ctx.fillStyle = textColor;
+    ctx.globalAlpha = 0.65;
+    ctx.font = '11px monospace';
+    ctx.fillText('airflow →', 12, 18);
+    if (stalled) {
+      ctx.fillStyle = '#c97c5d';
+      ctx.globalAlpha = 0.95;
+      ctx.fillText('STALL · upper-surface flow detached', 12, H - 12);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ============================================================
+     UI · readouts
+  ============================================================ */
+  function updateUI() {
+    const a = parseFloat(slider.value);
+    valLbl.textContent = a.toFixed(1);
+    const { CL, CD } = aero(a);
+    liftLbl.textContent = CL.toFixed(2);
+    dragLbl.textContent = CD.toFixed(2);
+    ldLbl.textContent = CD > 0.001 ? (CL/CD).toFixed(2) : '·';
+    const stalled = a > 16;
+    stateEl.textContent = stalled
+      ? 'STALLED — flow detached'
+      : (a < 0 ? 'inverted lift' : 'attached');
+    stateBl.classList.toggle('stalled', stalled);
+  }
+  slider.addEventListener('input', updateUI);
+
+  /* ============================================================
+     Animation loop
+  ============================================================ */
+  let lastT = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+    const a = parseFloat(slider.value);
+    const stalled = a > 16;
+    const stallStrength = stalled ? Math.min(1, (a - 16) / 6) : 0;
+    updateParticles(dt, a * Math.PI / 180, stallStrength);
+    draw(a);
+    requestAnimationFrame(loop);
+  }
+
+  setupTransform();
+  resize();
+  updateUI();
+  requestAnimationFrame(loop);
+})();
+</script>
+{% endraw %}

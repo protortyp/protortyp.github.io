@@ -1,0 +1,49 @@
+{% raw %}
+<script>
+  /* ============================================================
+     HSPhysics · shared physics helpers, loaded once
+  ============================================================ */
+  if (!window.HSPhysics) {
+    window.HSPhysics = {
+      Re: 6371e3,   // earth radius m
+      g0: 9.80665,  // surface gravity m/s²
+      H:  7200,     // scale height m
+      rho0: 1.225,  // sea-level density kg/m³
+
+      atmosphere(h_m) { return this.rho0 * Math.exp(-Math.max(h_m,0) / this.H); },
+      gravity(h_m)    { return this.g0 * Math.pow(this.Re / (this.Re + Math.max(h_m,0)), 2); },
+
+      soundSpeed(h_m) {
+        let T;
+        if (h_m > 25000) T = 221.6;
+        else if (h_m > 11000) T = 216.65;
+        else T = 288.15 - 6.5 * h_m / 1000;
+        return Math.sqrt(1.4 * 287 * T);
+      },
+      mach(V_mps, h_m) { return V_mps / this.soundSpeed(h_m); },
+
+      // Sutton–Graves convective heating, W/m²
+      // K = 1.7415e-4 for Earth air, R_n in m, V in m/s, ρ in kg/m³
+      suttonGraves(rho, V_mps, Rn_m) {
+        return 1.7415e-4 * Math.sqrt(rho / Rn_m) * Math.pow(V_mps, 3);
+      },
+
+      // Plasma frequency, Hz, n_e in cm⁻³
+      plasmaFreq(ne_cm3) { return 8980 * Math.sqrt(ne_cm3); },
+    };
+  }
+
+  /* shared palette tokens for chart code */
+  if (!window.HSPal) {
+    window.HSPal = {
+      teal:   '#7dd3c0',
+      amber:  '#f4a261',
+      purple: '#b08bbb',
+      gray:   '#6c7a89',
+      brick:  '#c97c5d',
+      faint:  'rgba(127,127,127,0.25)',
+      grid:   'rgba(127,127,127,0.18)',
+    };
+  }
+</script>
+{% endraw %}
