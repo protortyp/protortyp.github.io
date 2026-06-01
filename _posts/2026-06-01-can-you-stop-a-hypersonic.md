@@ -29,7 +29,7 @@ without being touched. The Chinese DF-17 has never been used. The
 American Dark Eagle has not yet been ordered to fire.
 
 So when we ask "can you stop a hypersonic," we are partly asking "what
-would happen if anyone fired one." The honest answer to that question,
+would happen if anyone fired one." The answer to that question,
 in June 2026, is that we do not know, because the kill chain we would
 use against one has not been tested against a true target in a real
 engagement, and the dedicated interceptor designed to do the job will
@@ -86,8 +86,8 @@ is what this post means by "hypersonic."
 
 ## First you have to see it
 
-Ground radar is line-of-sight. The Earth is round. Anything below the
-horizon is invisible.
+Ground radar is line-of-sight, and the Earth is round, so anything
+below the horizon is invisible.
 
 How far is the horizon? Imagine a radar on the ground, looking up. The
 line of sight grazes the surface tangentially and then leaves into
@@ -134,8 +134,7 @@ The good news, from the defender's perspective, is that the same plasma
 that breaks radar makes the glider visible in the infrared from low
 Earth orbit. SBIRS and the new HBTSS prototypes see the glide vehicle as
 a bright dot in the 2 to 3 micron band for most of its glide. The future
-of hypersonic defense is in low Earth orbit. The future just is not here
-yet.
+of hypersonic defense is in low Earth orbit, but it is not here yet.
 
 ## Then you have to track it
 
@@ -155,9 +154,9 @@ anywhere near the target. The defender needs the target's flight time
 from radar acquisition to impact to be longer than 150 seconds, by
 enough margin to actually maneuver onto a hit.
 
-For a ballistic warhead at 1,000 km, this is easy. Ten minutes of
-warning. Plenty of time to run the chain twice if you miss once. For a
-glide vehicle at 30 km, this is brutal. 260 seconds of warning. After
+For a ballistic warhead at 1,000 km, this is easy: ten minutes of
+warning, plenty of time to run the chain twice if you miss once. For a
+glide vehicle at 30 km, it is brutal: 260 seconds of warning, and after
 the 150-second kill chain the defender has about a hundred seconds left
 to maneuver onto a target that is itself maneuvering.
 
@@ -178,9 +177,9 @@ provided fire-control-quality tracks. Aegis baseline 5.1.5 took the cue.
 The SM-6 Block IAU got an engagement solution. The test was named
 Stellar Banshee.[^banshee]
 
-No SM-6 was actually fired. The engagement was simulated. The press
-covered it as a successful counter-hypersonic test. That was half true.
-The kill chain ran. The interceptor did not.
+No SM-6 was actually fired. The engagement was simulated, and the press
+covered it as a successful counter-hypersonic test. That was half true:
+the kill chain ran, but the interceptor did not.
 
 A live test, designated FTM-43, is on the schedule. As of May 2026 it
 has not occurred.
@@ -383,9 +382,9 @@ defender's cost-ratio victory of between two hundred thousand and
 fourteen hundred thousand percent, once one counted the infrastructure
 and casualties that were spared.
 
-The honest reading of those numbers is not that defense is winning on
-economics. It is that defense is winning on economics until the magazine
-runs out. The magazine has been running out faster than production
+Those numbers do not say defense is winning on economics. They say
+defense is winning on economics until the magazine runs out. The
+magazine has been running out faster than production
 replaces it. This is true now, against weapons that are not even glide
 vehicles. The arithmetic does not improve when the glide vehicles
 arrive.
@@ -397,13 +396,13 @@ is a stack: cheap directed energy at the bottom (Iron Beam, eventually
 JLWS) for drones and cruise missiles, mid-tier interceptors (PAC-3 MSE,
 David's Sling) for ballistic missiles, top-tier exoatmospheric (Arrow-3,
 SM-3 Block IIA) for ICBM-class threats, and a dedicated glide-phase
-weapon (GPI, SM-6 Block IAU) for HGVs. The stack does not exist yet. The
-glide-phase layer is paper. The directed-energy layer is rated for
+weapon (GPI, SM-6 Block IAU) for HGVs. The stack does not exist yet: the
+glide-phase layer is paper, and the directed-energy layer is rated for
 drones, not gliders.
 
 ## So can you stop a hypersonic?
 
-The honest 2026 answer is in three parts.
+The 2026 answer is in three parts.
 
 The first part is for the weapons the press calls hypersonic. Most of
 them, yes. Patriot has shot down dozens of Kinzhals. SM-6 has shot down
@@ -414,10 +413,10 @@ press will keep calling these successes hypersonic intercepts, because
 the word sells, and most readers will not notice the distinction.
 
 The second part is for an actual maneuvering boost-glide vehicle in the
-glide phase. The honest answer is that we do not know, because no one
-has tried. The dedicated weapon does not exist yet. The sensor that
+glide phase. The answer is that we do not know, because no one has
+tried. The dedicated weapon does not exist yet, and the sensor that
 would cue it is mostly on the drawing board. The simulated test in March
-2025 said the kill chain runs. The live test has not occurred. The
+2025 said the kill chain runs; the live test has not occurred. The
 earliest plausible date for a real intercept of a representative HGV is
 not GPI in 2029. It is the SM-6 Block IAU's FTM-43, which is on the
 calendar but not yet on the range. If FTM-43 succeeds, the answer shifts
@@ -434,13 +433,11 @@ be a first of a kind that does not unhappen. The widest version of the
 hypersonic gap, the one that haunts every American defense planner's
 slide deck, sits in a silo at Dombarovsky with the safety on. The fact
 that it stays there is not a comfort. It is a fact about who has and has
-not pressed the button so far. That set is observable. It can change.
+not pressed the button so far. That set is observable, and it can change.
 
 So can you stop a hypersonic? Sometimes, the wrong ones. Probably not
 the right ones, yet. The one defense working against the right ones
 today is a politician's restraint, not a kill chain.
-
-The defenders did not stop being clever. The attackers got harder.
 
 The worst one is still in its silo. And we are running out of
 interceptors against the second-worst ones.
