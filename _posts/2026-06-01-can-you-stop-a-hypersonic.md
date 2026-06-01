@@ -4,7 +4,7 @@ date: 2026-06-01 08:12:29 +0200
 categories: [defense, tech]
 tags: []
 math: true
-hn: true
+hn: 48358515
 ---
 
 {% include charts/hypersonic/lib.html %}
