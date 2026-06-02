@@ -27,3 +27,5 @@ _sass/vendors
 assets/js/dist
 .direnv
 .gstack/
+
+tools/local/
