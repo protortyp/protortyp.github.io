@@ -120,10 +120,10 @@ the technology to succeed, argued that the biology imposes a cost floor
 around 21 dollars a kilo that may keep cultivated meat permanently above
 commodity chicken, and a 2024 review of all the published studies landed
 in the cautious middle, that parity is unlikely without advances no one
-has made yet.[^humbird] So I am not promising you a cheap cultured
-chicken breast next year, or maybe next decade. I am pointing at the
-direction of the curve, and at the fact that the nearer bet,
-fermentation, is already on the shelf.
+has made yet.[^humbird] So I don't believe in cheap cultured chicken
+breast next year, or maybe next decade. I am pointing at the direction
+of the curve, and at the fact that the nearer bet, fermentation, is
+already on the shelf.
 
 What makes me think the curve gets followed even through the bans and
 the funding winter is that the animal is not the only thing these
